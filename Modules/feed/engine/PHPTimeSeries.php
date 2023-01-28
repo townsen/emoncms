@@ -282,7 +282,7 @@ class PHPTimeSeries implements engine_methods
      * @param integer $start The unix timestamp in ms of the start of the data range
      * @param integer $end The unix timestamp in ms of the end of the data range
      * @param integer $interval output data point interval
-     * @param integer $average enabled/disable averaging
+     * @param integer $average 1: enabled 0: disable averaging 2: use last value if no datapoint
      * @param string $timezone a name for a php timezone eg. "Europe/London"
      * @param string $timeformat csv datetime format e.g: unix timestamp, excel, iso8601
      * @param integer $csv pipe output as csv
@@ -298,6 +298,7 @@ class PHPTimeSeries implements engine_methods
         $skipmissing = (int) $skipmissing;
         $limitinterval = (int) $limitinterval;
         
+        $this->log->warn("get_data_combined: id=$id, start=$start, end=$end, interval=$interval");
         global $settings;
         if ($timezone===0) $timezone = "UTC";
         
@@ -358,11 +359,13 @@ class PHPTimeSeries implements engine_methods
         if (!$fh = $this->open($id,'rb')) return false;
         
         // Get starting position
-        if ($average) {
+        switch ($average) {
+          case 1:
             $start_dp = $this->binarysearch($fh,$time,$npoints);
             if ($start_dp==-1) {
                 $start_dp = array($npoints);
             }
+            break;
         }
         
         if ($interval!="original") {
@@ -378,9 +381,11 @@ class PHPTimeSeries implements engine_methods
                     $div_end = $date->getTimestamp();
                 }
                 
+                $this->log->warn("get_data_combined iteration: start=$div_start, end=$div_end");
                 $value = null;
                 
-                if (!$average) {
+                switch ($average) {
+                  case 0:
                     // returns nearest datapoint that is >= search time
                     $result = $this->binarysearch($fh,$time,$npoints);
                     if ($result!=-1) {
@@ -389,7 +394,15 @@ class PHPTimeSeries implements engine_methods
                             $value = $result[2];
                         }
                     }
-                } else {
+                    break;
+                  case 2:
+                    // returns nearest datapoint that is <= search time
+                    $result = $this->binarysearch($fh,$time,$npoints,false,true);
+                    if ($result!=-1) {
+                      $value = $result[2];
+                    }
+                    break;
+                  case 1: // average processing
                     $sum = 0;
                     $n = 0;
 
@@ -435,7 +448,7 @@ class PHPTimeSeries implements engine_methods
                     $start_dp[0] = $next_start_dp[0];
                     
                     if ($n>0) $value = $sum / $n;
-                
+                    break;
                 }
                 
                 if ($value!==null || $skipmissing===0) {
@@ -466,6 +479,7 @@ class PHPTimeSeries implements engine_methods
             }*/
         }
         
+        $this->log->warn("get_data_combined iteration over");
         fclose($fh);
         
         if ($csv) {
@@ -522,48 +536,59 @@ class PHPTimeSeries implements engine_methods
         exit;
     }
 
-    // returns nearest datapoint that is >= search time
-    private function binarysearch($fh,$time,$npoints,$exact=false)
+    // When the exact parameter is true this returns the datapoint that 
+    // corresponds to the time parameter.
+    // When the exact parameter is false, then it returns the nearest datapoint 
+    // that is >= (invert false) or <= (invert true) to the time parameter.
+    private function binarysearch($fh,$time,$npoints,$exact=false,$invert=false)
     {
         // Binary search works by finding the file midpoint and then asking if
         // the datapoint we want is in the first half or the second half
         // it then finds the mid point of the half it was in and asks which half
         // of this new range its in, until it narrows down on the value.
-        // This approach usuall finds the datapoint you want in around 20
-        // itterations compared to the brute force method which may need to
-        // go through the whole file that may be millions of lines to find a
-        // datapoint.
+        // This approach usually finds the datapoint you want in log2(N)
+        // where N is the number of datapoints. Thus it will take at most 20
+        // iterations to find a datapoint within a million datapoint file.
+        // Compare this to the brute force method which may need to
+        // go through millions of lines in the whole file to find a datapoint.
 
-        // 30 here is our max number of itterations
-        // the position should usually be found within
-        // 20 itterations.
+        // Set 30 as the max number of iterations
+        // (guaranteed to work up to 1 billion datapoints!)
         
         if ($npoints==0) return -1;
-        $start = -1; $end = $npoints-1;
+        $start = -1; $end = $npoints-1; $last_mid = -2;
         
         for ($i=0; $i<30; $i++)
         {
-            $mid = $start + ceil(($end-$start)*0.5);
-            if ($mid<0) {
-                print "ERROR: mid<0 should not happen\n";
+            $mid = $start + ($invert ? floor(($end-$start)*0.5): ceil(($end-$start)*0.5));
+
+            if ($mid<0) return -1; // when an invert search is not found
+
+            if ($last_mid != $mid) {
+              $last_mid = $mid;
+              fseek($fh,$mid*9);
+              $dp = @unpack("x/Itime/fvalue",fread($fh,9));
+
+              // $this->log->warn("start: $start, mid: $mid, end: $end, midtime=".$dp['time']);
+
+              if ($dp['time']==$time) {
+                  // $this->log->warn("exact match returning dp $mid: ".$dp['value']." at ".$dp['time']);
+                  return array($mid,$dp['time'],$dp['value']);
+              }
             }
-
-            fseek($fh,$mid*9);
-            $dp = @unpack("x/Itime/fvalue",fread($fh,9));
-
-            if ($dp['time']==$time) {
+            else {
+              if ($exact) return -1;
+              if ((!$invert && $dp['time']>$time) || ($invert && $dp['time']<$time)) {
+                $this->log->warn("inexact match returning dp $mid: ".$dp['value']." at ".$dp['time']);
                 return array($mid,$dp['time'],$dp['value']);
-            }
-            
-            if (($end-$start)==1) {
-                if (!$exact && $dp['time']>$time) {
-                    return array($mid,$dp['time'],$dp['value']);
-                }
+              } else {
+                $this->log->warn("match not found");
                 return -1;
+              }
             }
-            
             if ($time>$dp['time']) $start = $mid; else $end = $mid;
         }
+        $this->log->warn("binarysearch: exit not found");
         return -1;
     }
 

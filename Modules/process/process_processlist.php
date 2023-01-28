@@ -653,6 +653,17 @@ class Process_ProcessList
               "description"=>_("<p><b>Source Feed:</b><br>Virtual feeds should use this processor as the first one in the process list. It sources data from the selected feed.<br>The sourced value is passed back for further processing by the next processor in the processing list.<br>You can then add other processors to apply logic on the passed value for post-processing calculations in realtime.</p><p>Note: This virtual feed process list is executed on visualizations requests that use this virtual feed.</p>")
            ),
            array(
+              "id_num"=>54,
+              "name"=>_("Source Feed LastValue"),
+              "short"=>"sfeedlast",
+              "argtype"=>ProcessArg::FEEDID,
+              "function"=>"source_feed_data_time_lastvalue",
+              "datafields"=>1,
+              "unit"=>"",
+              "group"=>_("Virtual"),
+              "description"=>_("<p><b>Source Feed Lastvalue:</b><br>Virtual feeds can use this processor as the first one in the process list. It sources data from the selected feed. However, if the feed does not contain a value at the start of the interval it will use the previous value. This is useful for feeds that contain unitcost data that changes at irregular intervals.<br>The sourced value is passed back for further processing by the next processor in the processing list.<br>You can then add other processors to apply logic on the passed value for post-processing calculations in realtime.</p><p>Note: This virtual feed process list is executed on visualizations requests that use this virtual feed.</p>")
+           ),
+           array(
               "id_num"=>55,
               "name"=>_("+ source feed"),
               "short"=>"+ sfeed",
@@ -1475,6 +1486,32 @@ class Process_ProcessList
             // Load feed to data cache if it has not yet been loaded
             if (!isset($this->data_cache[$feedid])) {
                 $this->data_cache[$feedid] = $this->feed->get_data($feedid,$options['start']*1000,$options['end']*1000,$options['interval'],$options['average'],$options['timezone'],'unix',false,0,0);
+            }
+            // Return value
+            if (isset($this->data_cache[$feedid][$options['index']])) {
+                return $this->data_cache[$feedid][$options['index']][1];
+            }
+        } else {
+            // This is a request for the last value only
+            $timevalue = $this->feed->get_timevalue($feedid);
+            if (is_null($timevalue)) return null;
+            return $timevalue["value"];
+        }
+        return null;
+    }
+
+    // Fetch last present datapoint from source feed data at specified timestamp
+    // Loads full feed to data cache if it's the first time to load
+    // The same as "Source Feed" except that if the source feed does not contain
+    // data at the request time then return the prior value
+    public function source_feed_data_time_lastvalue($feedid, $time, $value, $options)
+    {
+        // If start and end are set this is a request over muultiple data points
+        if (isset($options['start']) && isset($options['end'])) {
+            $this->log->info('I am in source feed data time lastvalue');
+            // Load feed to data cache if it has not yet been loaded
+            if (!isset($this->data_cache[$feedid])) {
+                $this->data_cache[$feedid] = $this->feed->get_data($feedid,$options['start']*1000,$options['end']*1000,$options['interval'],2,$options['timezone'],'unix',false,0,0); // 0 is skipmissing, limitinterval
             }
             // Return value
             if (isset($this->data_cache[$feedid][$options['index']])) {
