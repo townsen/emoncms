@@ -298,7 +298,6 @@ class PHPTimeSeries implements engine_methods
         $skipmissing = (int) $skipmissing;
         $limitinterval = (int) $limitinterval;
         
-        $this->log->warn("get_data_combined: id=$id, start=$start, end=$end, interval=$interval");
         global $settings;
         if ($timezone===0) $timezone = "UTC";
         
@@ -381,7 +380,6 @@ class PHPTimeSeries implements engine_methods
                     $div_end = $date->getTimestamp();
                 }
                 
-                $this->log->warn("get_data_combined iteration: start=$div_start, end=$div_end");
                 $value = null;
                 
                 switch ($average) {
@@ -479,7 +477,6 @@ class PHPTimeSeries implements engine_methods
             }*/
         }
         
-        $this->log->warn("get_data_combined iteration over");
         fclose($fh);
         
         if ($csv) {
@@ -569,26 +566,20 @@ class PHPTimeSeries implements engine_methods
               fseek($fh,$mid*9);
               $dp = @unpack("x/Itime/fvalue",fread($fh,9));
 
-              $this->log->warn("start: $start, mid: $mid, end: $end, midtime=".$dp['time']);
-
               if ($dp['time']==$time) {
-                  $this->log->warn("exact match returning dp $mid: ".$dp['value']." at ".$dp['time']);
                   return array($mid,$dp['time'],$dp['value']);
               }
             }
             else {
               if ($exact) return -1;
               if ((!$invert && $dp['time']>$time) || ($invert && $dp['time']<$time)) {
-                $this->log->warn("inexact match returning dp $mid: ".$dp['value']." at ".$dp['time']);
                 return array($mid,$dp['time'],$dp['value']);
               } else {
-                $this->log->warn("match not found");
                 return -1;
               }
             }
             if ($time>$dp['time']) $start = $mid; else $end = $mid;
         }
-        $this->log->warn("binarysearch: exit not found");
         return -1;
     }
 

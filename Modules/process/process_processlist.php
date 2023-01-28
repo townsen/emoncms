@@ -1506,7 +1506,6 @@ class Process_ProcessList
     // data at the request time then return the prior value
     public function source_feed_data_time_lastvalue($feedid, $time, $value, $options)
     {
-        $this->log->warn("source_feed_data_time_lastvalue(): time=$time");
         // If start and end are set this is a request over muultiple data points
         if (isset($options['start']) && isset($options['end'])) {
             // Load feed to data cache if it has not yet been loaded
@@ -1521,7 +1520,6 @@ class Process_ProcessList
         } else {
             // This is a request for the last value only
             $timevalue = $this->feed->get_timevalue($feedid);
-            $this->log->warn("source_feed_data_time_lastvalue(): lastvalue=".implode(",",$timevalue));
             if (is_null($timevalue)) return null;
             return $timevalue["value"];
         }
