@@ -59,6 +59,7 @@ class VirtualFeed implements engine_methods
      */
     public function lastvalue($feedid)
     {
+        $this->log->warn("lastvalue: $feedid");
         $now = time();
         $feedid = intval($feedid);
         $processList = $this->feed->get_processlist($feedid);
@@ -94,6 +95,8 @@ class VirtualFeed implements engine_methods
         
         $processList = $this->feed->get_processlist($feedid);
         if ($processList == '' || $processList == null) return false;
+
+        $this->log->warn("get_data_combined: feed=$feedid, start=$start, end=$end, interval=$interval, average=$average");
 
         if ($csv) {
             global $settings;
@@ -148,9 +151,11 @@ class VirtualFeed implements engine_methods
         $data = array();
         $dataValue = null;
         
+        $this->log->warn("looping from $time to $end");
         while($time<=$end)
         {
             $dataValue = $process->input($time, $dataValue, $processList, $opt_timearray); // execute processlist 
+            $this->log->warn("iteration at $time value $dataValue");
                 
             if ($dataValue!==null || $skipmissing===0) { // Remove this to show white space gaps in graph
                 if ($dataValue !== null) $dataValue = (float) $dataValue;

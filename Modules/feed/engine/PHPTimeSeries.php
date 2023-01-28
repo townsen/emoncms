@@ -569,10 +569,10 @@ class PHPTimeSeries implements engine_methods
               fseek($fh,$mid*9);
               $dp = @unpack("x/Itime/fvalue",fread($fh,9));
 
-              // $this->log->warn("start: $start, mid: $mid, end: $end, midtime=".$dp['time']);
+              $this->log->warn("start: $start, mid: $mid, end: $end, midtime=".$dp['time']);
 
               if ($dp['time']==$time) {
-                  // $this->log->warn("exact match returning dp $mid: ".$dp['value']." at ".$dp['time']);
+                  $this->log->warn("exact match returning dp $mid: ".$dp['value']." at ".$dp['time']);
                   return array($mid,$dp['time'],$dp['value']);
               }
             }

@@ -86,7 +86,7 @@ class Process
 
     public function input($time, $value, $processList, $options = null)
     {
-        //$this->log->info("input() received time=$time\tvalue=$value");
+        $this->log->warn("input() received time=$time\tvalue=$value");
 
         $this->proc_initialvalue = $value; // save the input value at beginning of the processes list execution
         $this->proc_skip_next = false;     // skip execution of next process in process list
@@ -120,6 +120,7 @@ class Process
                 $this->log->error('Publish to MQTT and SendMail blocked for Virtual Feeds');
             } else {
                 $value = $this->$process_function($arg,$time,$value,$options); // execute process function
+                $this->log->warn("input() called process_function $process_function, returned value $value");
             }
             
             if ($this->proc_skip_next) {
@@ -150,6 +151,7 @@ class Process
                 return false;
             }
         }
+        $this->log->warn("input() returning value $value");
         return $value;
     }
 
