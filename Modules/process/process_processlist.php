@@ -39,6 +39,7 @@ class Process_ProcessList
         $this->proc_goto = &$parent->proc_goto;
 
         $this->log = new EmonLogger(__FILE__);
+        $this->log->setDebug();
 
         // Load MQTT if enabled
         // Publish value to MQTT topic, see: http://openenergymonitor.org/emon/node/5943
@@ -657,7 +658,7 @@ class Process_ProcessList
               "name"=>_("Source Feed LastValue"),
               "short"=>"sfeedlast",
               "argtype"=>ProcessArg::FEEDID,
-              "function"=>"source_feed_data_time_lastvalue",
+              "function"=>"source_feed_data_recent",
               "datafields"=>1,
               "unit"=>"",
               "group"=>_("Virtual"),
@@ -1504,8 +1505,9 @@ class Process_ProcessList
     // Loads full feed to data cache if it's the first time to load
     // The same as "Source Feed" except that if the source feed does not contain
     // data at the request time then return the prior value
-    public function source_feed_data_time_lastvalue($feedid, $time, $value, $options)
+    public function source_feed_data_recent($feedid, $time, $value, $options)
     {
+        $this->log->debug("source_feed_data_recent(feed=$feedid,time=$time,value=$value,options=[".implode(",",$options)."])");
         // If start and end are set this is a request over muultiple data points
         if (isset($options['start']) && isset($options['end'])) {
             // Load feed to data cache if it has not yet been loaded
@@ -1520,6 +1522,7 @@ class Process_ProcessList
         } else {
             // This is a request for the last value only
             $timevalue = $this->feed->get_timevalue($feedid);
+            $this->log->debug("source_feed_data_recent(): lastvalue=[".implode(",",$timevalue)."]");
             if (is_null($timevalue)) return null;
             return $timevalue["value"];
         }

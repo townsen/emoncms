@@ -21,6 +21,7 @@ class EmonLogger
     public $stout = false;
 
     private $log_levels = array(
+            0 =>'DEBUG',
             1 =>'INFO',
             2 =>'WARN', // default
             3 =>'ERROR'
@@ -50,11 +51,23 @@ class EmonLogger
         }
     }
     
+    public function setDebug()
+    {
+        $this->log_level = 0;
+    }
+
     public function set($logfile, $log_level)
     {
         $this->logfile = $logfile;
         $this->log_enabled = true;
         $this->log_level = $log_level;
+    }
+
+    public function debug($message)
+    {
+        if ($this->log_level <= 0) {
+            $this->write("DEBUG", $message);
+        }
     }
 
     public function info($message)

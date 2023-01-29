@@ -18,6 +18,7 @@ class PHPTimeSeries implements engine_methods
     {
         if (isset($settings['datadir'])) $this->dir = $settings['datadir'];
         $this->log = new EmonLogger(__FILE__);
+        $this->log->setDebug();
     }
     
     /**
@@ -245,6 +246,7 @@ class PHPTimeSeries implements engine_methods
     public function lastvalue($id)
     {
         $id = (int) $id;
+        $this->log->debug("lastvalue(id=$id)");
 
         if (!$npoints = $this->get_npoints($id)) return false;
         if (!$fh = $this->open($id,'rb')) return false;
@@ -252,7 +254,9 @@ class PHPTimeSeries implements engine_methods
         fseek($fh,($npoints-1)*9);
         $dp = unpack("x/Itime/fvalue",fread($fh,9));
         fclose($fh);
-        return array('time'=>$dp['time'], 'value'=>$dp['value']);
+        $ret =  array('time'=>$dp['time'], 'value'=>$dp['value']);
+        $this->log->debug("lastvalue(id=$id)=[".implode(",",$ret)."]");
+        return $ret;
     }
 
     /**
