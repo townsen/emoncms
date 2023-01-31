@@ -720,6 +720,17 @@ class Process_ProcessList
               "description"=>_("<p><b>Source Cost Feed:</b><br>Virtual feeds can use this processor as the first one in the process list.<br>It sources data from the selected feed. However, if the feed does not contain a value at the start of the interval it will use the previous value. This is useful for feeds that contain cost data that changes at irregular intervals and takes effect for future dates.<br>The sourced value is passed back for further processing by the next processor in the processing list.<br>You can then add other processors to apply logic on the passed value for post-processing calculations in realtime.</p><p>Note: This virtual feed process list is executed on visualizations requests that use this virtual feed.</p>")
            ),
            array(
+              "id_num"=>61,
+              "name"=>_("Source Feed Delta"),
+              "short"=>"sdelta",
+              "argtype"=>ProcessArg::FEEDID,
+              "function"=>"source_feed_delta",
+              "datafields"=>1,
+              "unit"=>"",
+              "group"=>_("Virtual"),
+              "description"=>_("<p><b>Source Feed Delta:</b><br>Virtual feeds can use this processor as the first one in the process list.<br>It sources data from the selected feed, transforming the values at each point to a delta relative to the previous point. This is useful for calculating costs per time interval from a cumulative total.<br>The sourced value is passed back for further processing by the next processor in the processing list.<br>You can then add other processors to apply logic on the passed value for post-processing calculations in realtime.</p><p>Note: This virtual feed process list is executed on visualizations requests that use this virtual feed.</p>")
+           ),
+           array(
               "name"=>_("EXIT"),
               "short"=>"EXIT",
               "argtype"=>ProcessArg::NONE,
@@ -1527,6 +1538,37 @@ class Process_ProcessList
             // This is a request for the last value only
             $timevalue = $this->feed->get_timevalue($feedid);
             $this->log->debug("source_cost_feed(): lastvalue=[".implode(",",$timevalue)."]");
+            if (is_null($timevalue)) return null;
+            return $timevalue["value"];
+        }
+        return null;
+    }
+
+    // Fetch the deltas of the source feed data
+    // Loads full feed to data cache if it's the first time to load
+    // The same as "Source Feed" except that if the source feed does not contain
+    // data at the request time then return the prior value
+    public function source_feed_delta($feedid, $time, $value, $options)
+    {
+        $this->log->debug("source_feed_delta(feed=$feedid,time=$time,value=$value,options=".dumpopt($options));
+        // If start and end are set this is a request over multiple data points
+        if (isset($options['start']) && isset($options['end'])) {
+            // Load feed to data cache if it has not yet been loaded
+            if (!isset($this->data_cache[$feedid])) {
+                // Use named parameter retro to indicate inexact lookup type for costs (see feed/engine/PHPTimeSeries.php)
+                $this->data_cache[$feedid] = $this->feed->get_data($feedid,$options['start']*1000,$options['end']*1000,$options['interval'],0,$options['timezone'],'unix',delta: 1);
+                $this->log->debug("source_feed_delta() loaded to cache");
+            }
+            // Return value
+            if (isset($this->data_cache[$feedid][$options['index']])) {
+                $ret = $this->data_cache[$feedid][$options['index']][1];
+                $this->log->debug("source_feed_delta()cached[${options['index']}]=$ret");
+                return $ret;
+            }
+        } else {
+            // @TODO This is a request for the last value only (shouldn't happen!)
+            $timevalue = $this->feed->get_timevalue($feedid);
+            $this->log->error("source_feed_delta(): lastvalue=[".implode(",",$timevalue)."]");
             if (is_null($timevalue)) return null;
             return $timevalue["value"];
         }
