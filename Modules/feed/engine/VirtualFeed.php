@@ -182,12 +182,7 @@ class VirtualFeed implements engine_methods
             $helperclass->csv_close();
             exit;
         } else {
-            $first_time = $data[0][0];
-            $first_value = $data[0][1];
-            $last = end($data);
-            $last_time = $last[0];
-            $last_value = $last[1];
-            $this->log->debug("get_data_combined()=[($first_time,$first_value)..($last_time,$last_value)]");
+            $this->log->debug("get_data_combined()=".dumpdata($data));
             return $data;
         }
     }
