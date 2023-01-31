@@ -23,6 +23,7 @@ class PHPFina implements engine_methods
     {
         if (isset($settings['datadir'])) $this->dir = $settings['datadir'];
         $this->log = new EmonLogger(__FILE__);
+        $this->log->setDebug(false);
     }
     
 // #### \/ Below are required methods
@@ -437,7 +438,7 @@ class PHPFina implements engine_methods
      * @param integer $limitinterval limit interval to feed interval
      * @return void or array
      */
-    public function get_data_combined($id,$start,$end,$interval,$average=0,$timezone="UTC",$timeformat="unix",$csv=false,$skipmissing=0,$limitinterval=1)
+    public function get_data_combined($id,$start,$end,$interval,$average=0,$timezone="UTC",$timeformat="unix",$csv=false,$skipmissing=0,$limitinterval=1,$retro=false)
     {
         $id = (int) $id;
         $start = (int) $start;

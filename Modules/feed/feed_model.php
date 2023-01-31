@@ -24,7 +24,7 @@ class Feed
     public function __construct($mysqli,$redis,$settings)
     {
         $this->log = new EmonLogger(__FILE__);
-        $this->log->setDebug();
+        $this->log->setDebug(false);
         $this->mysqli = $mysqli;
         $this->redis = $redis;
         $this->settings = $settings;
@@ -590,8 +590,9 @@ class Feed
         }
     }
 
-    public function get_data($feedid,$start,$end,$interval,$average=0,$timezone="UTC",$timeformat="unixms",$csv=false,$skipmissing=0,$limitinterval=0,$delta=false,$dp=-1)
+    public function get_data($feedid,$start,$end,$interval,$average=0,$timezone="UTC",$timeformat="unixms",$csv=false,$skipmissing=0,$limitinterval=0,$delta=false,$dp=-1,$retro=false)
     {
+        $this->log->debug("get_data(feed=$feedid,start=$start,end=$end,interval=$interval,average=$average,delta=$delta,dp=$dp)");
         $feedid = (int) $feedid;
         if (!$this->exist($feedid)) {
             return array('success'=>false, 'message'=>'Feed does not exist');
@@ -634,7 +635,7 @@ class Feed
         $engine = $this->get_engine($feedid);
 
         // Call to engine get_data_combined
-        $data = $this->EngineClass($engine)->get_data_combined($feedid,$start,$end,$interval,$average,$timezone,$timeformat,$csv,$skipmissing,$limitinterval);
+        $data = $this->EngineClass($engine)->get_data_combined($feedid,$start,$end,$interval,$average,$timezone,$timeformat,$csv,$skipmissing,$limitinterval,retro: $retro);
 
         if ($this->settings['redisbuffer']['enabled'] && !isset($data["success"]) && !$average && is_numeric($interval) && $csv==false) {
             // Add redisbuffer cache if available
@@ -686,6 +687,7 @@ class Feed
         // Apply different timeformats if applicable
         if ($timeformat!="unix") $data = $this->format_output_time($data,$timeformat,$timezone);
         
+        $this->log->debug("get_data(feed=$feedid)=".dumpdata($data));
         return $data;
     }
     

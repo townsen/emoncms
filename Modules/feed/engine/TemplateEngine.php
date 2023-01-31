@@ -130,7 +130,7 @@ class TemplateEngine implements engine_methods
      *
      * While there are applications where returning the exact timestamp of the recorded data is important, this is currently outside of the design goals of the emoncms application.
     */
-    public function get_data_combined($id,$start,$end,$interval,$average=0,$timezone="UTC",$timeformat="unix",$csv=false,$skipmissing=0,$limitinterval=1)
+    public function get_data_combined($id,$start,$end,$interval,$average=0,$timezone="UTC",$timeformat="unix",$csv=false,$skipmissing=0,$limitinterval=1,$retro=false)
     {
         $id = (int) $id;
         $skipmissing = (int) $skipmissing;

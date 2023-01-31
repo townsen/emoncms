@@ -87,7 +87,7 @@ class Process
 
     public function input($time, $value, $processList, $options = null)
     {
-        $this->log->debug("input(time=$time,value=$value,processList=$processList)");
+        $this->log->debug("input(time=$time,value=$value,processList=$processList,options=".dumpopt($options).")");
         $this->proc_initialvalue = $value; // save the input value at beginning of the processes list execution
         $this->proc_skip_next = false;     // skip execution of next process in process list
 
@@ -119,7 +119,7 @@ class Process
             if (in_array($process_function, $not_for_virtual_feeds) && isset($options['sourcetype']) && $options['sourcetype']==ProcessOriginType::VIRTUALFEED) {
                 $this->log->error('Publish to MQTT and SendMail blocked for Virtual Feeds');
             } else {
-                $this->log->debug("input() called $process_function(arg=$arg,time=$time,value=$value)");
+                $this->log->debug("input() called $process_function(arg=$arg,time=$time,value=$value,options=".dumpopt($options).")");
                 $value = $this->$process_function($arg,$time,$value,$options); // execute process function
                 $this->log->debug("input() $process_function returned $value");
             }

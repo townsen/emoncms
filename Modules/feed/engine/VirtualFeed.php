@@ -86,7 +86,7 @@ class VirtualFeed implements engine_methods
     }
     
     // Executes virtual feed processlist for each timestamp in range
-    public function get_data_combined($feedid,$start,$end,$interval,$average=0,$timezone="UTC",$timeformat="unix",$csv=false,$skipmissing=0,$limitinterval=1)
+    public function get_data_combined($feedid,$start,$end,$interval,$average=0,$timezone="UTC",$timeformat="unix",$csv=false,$skipmissing=0,$limitinterval=1,$retro=false)
     {   
         $this->log->debug("get_data_combined(feed=$feedid,start=$start,end=$end,interval=$interval)");
         $feedid = (int) $feedid;
@@ -187,7 +187,7 @@ class VirtualFeed implements engine_methods
             $last = end($data);
             $last_time = $last[0];
             $last_value = $last[1];
-            $this->log->debug("Returning virtual feed data array: first=($first_time,$first_value), last=($last_time,$last_value)");
+            $this->log->debug("get_data_combined()=[($first_time,$first_value)..($last_time,$last_value)]");
             return $data;
         }
     }

@@ -18,6 +18,7 @@ class EmonLogger
     private $caller = "";
     private $logenabled = false;
     private $log_level = 2;
+    private $saved_log_level = null;
     public $stout = false;
 
     private $log_levels = array(
@@ -51,9 +52,15 @@ class EmonLogger
         }
     }
     
-    public function setDebug()
+    public function setDebug($on = true)
     {
-        $this->log_level = 0;
+        if ($on) {
+            $this->saved_log_level = $this->log_level;
+            $this->log_level = 0;
+        }
+        else {
+            if (!is_null($this->saved_log_level)) $this->log_level = $this->saved_log_level;
+        }
     }
 
     public function set($logfile, $log_level)

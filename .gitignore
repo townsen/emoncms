@@ -10,6 +10,7 @@ emoncms.log
 .vagrant/
 .env
 .vscode/*
+*.swp
 
 # Ignore all modules except core ones
 Modules/*
