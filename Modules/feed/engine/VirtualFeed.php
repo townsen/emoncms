@@ -152,9 +152,18 @@ class VirtualFeed implements engine_methods
 
         $data = array();
         $dataValue = null;
+        $duration = 10000000;
         
         while($time<=$end)
         {
+            if ($fixed_interval) {
+                $duration = $interval;
+                $opt_timearray['duration_sec'] = $duration;
+            } else {
+                $date->modify($modify);
+                $duration = $date->getTimestamp() - $time;
+                $opt_timearray['duration_sec'] = $duration;
+            }
             $dataValue = $process->input($time, $dataValue, $processList, $opt_timearray); // execute processlist 
             $this->log->debug("process->input(time=$time)=$dataValue");
                 
@@ -167,14 +176,8 @@ class VirtualFeed implements engine_methods
                     $data[] = array($time, $dataValue);
                 }
             }
-            
             // Advance position
-            if ($fixed_interval) {
-                $time += $interval;
-            } else {
-                $date->modify($modify);
-                $time = $date->getTimestamp();
-            }
+            $time += $duration;
             $opt_timearray['index']++;
         }
 

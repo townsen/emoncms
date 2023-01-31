@@ -121,7 +121,7 @@ class Process
             } else {
                 $this->log->debug("input() called $process_function(arg=$arg,time=$time,value=$value,options=".dumpopt($options).")");
                 $value = $this->$process_function($arg,$time,$value,$options); // execute process function
-                $this->log->debug("input() $process_function returned $value");
+                $this->log->debug("input() $process_function returned '$value'");
             }
             
             if ($this->proc_skip_next) {
@@ -152,7 +152,7 @@ class Process
                 return false;
             }
         }
-        $this->log->debug("input() returning value $value");
+        $this->log->debug("input()=$value");
         return $value;
     }
 

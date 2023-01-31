@@ -443,6 +443,7 @@ class Feed
                 $row['start_time'] = $meta->start_time;
                 $row['interval'] = $meta->interval;
             }
+            $this->log->debug("Getting feeds: ".dumpdata($row));
             $feeds[] = $row;
         }
         return $feeds;

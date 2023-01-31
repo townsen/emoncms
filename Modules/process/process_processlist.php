@@ -729,7 +729,7 @@ irregular intervals and takes effect for future dates.<br>The value is passed on
               "datafields"=>1,
               "unit"=>"",
               "group"=>_("Virtual"),
-              "description"=>_("<p><b>Source Feed Delta:</b><br>Virtual feeds can use this processor as the first one in the process list.<br>It sources data from the selected feed, transforming the values at each point to a delta relative to the previous point. This is useful for calculating costs per time interval from a cumulative total. <br>The sourced value is passed on for further processing by the next processor in the processing list. </p><p>Note: This virtual feed process list is executed on visualizations requests that use this virtual feed.</p>")
+              "description"=>_("<p><b>Source Feed Delta:</b><br>Virtual feeds can use this processor as the first one in the process list.<br>It sources data from the selected feed, transforming the values at each point to a delta relative to the previous point. This is useful for calculating costs per time interval from a cumulative total. </p><p>Note: This virtual feed process list is executed on visualizations requests that use this virtual feed.</p>")
            ),
            array(
               "id_num"=>62,
@@ -740,7 +740,19 @@ irregular intervals and takes effect for future dates.<br>The value is passed on
               "datafields"=>1,
               "unit"=>"",
               "group"=>_("Virtual"),
-              "description"=>_("<p><b>Cost Multiplier:</b><br>This takes the values from the previous process in the list and multiplies them by the values in the selected feed. It treats the selected feeds as a cost feed that contains a datapoint whenever the cost changes and the value of which at any given point in time is the most recent value prior to the time.<br>The computed value is passed on for further processing by the next processor in the processing list.<p>Note: This virtual feed process list is executed on visualizations requests that use this virtual feed.</p>")
+              "description"=>_("<p><b>Cost Multiplier:</b><br>This takes the values from the previous process in the list and multiplies them by the values in the selected feed. It treats the selected feeds as a cost feed that contains a datapoint whenever the cost changes and the value of which at any given point in time is the most recent value prior to the time.<p>Note: This virtual feed process list is executed on visualizations requests that use this virtual feed.</p>")
+           ),
+           array(
+              "id_num"=>63,
+              "name"=>_("Daily Charges"),
+              "short"=>"daily_charge",
+              "argtype"=>ProcessArg::NONE,
+              "function"=>"daily_charge",
+              "datafields"=>0,
+              "unit"=>"",
+              "group"=>_("Virtual"),
+              "description"=>_("<p><b>Daily Charges:</b><br>This takes the values from the previous process in the list and multiplies them by the fraction of a day represented by the current interval. With
+input from a Source Cost Feed representing daily standing charges it can be used to calculate the cost over any time period. <p>Note: This virtual feed process list is executed on visualizations requests that use this virtual feed.</p>")
            ),
            array(
               "name"=>_("EXIT"),
@@ -1549,7 +1561,7 @@ irregular intervals and takes effect for future dates.<br>The value is passed on
         } else {
             // This is a request for the last value only
             $timevalue = $this->feed->get_timevalue($feedid);
-            $this->log->debug("source_cost_feed(): lastvalue=[".implode(",",$timevalue)."]");
+            $this->log->debug("source_cost_feed(): lastvalue=".dumpdata($timevalue));
             if (is_null($timevalue)) return null;
             return $timevalue["value"];
         }
@@ -1600,6 +1612,15 @@ irregular intervals and takes effect for future dates.<br>The value is passed on
         return $value;
     }
 
+    public function daily_charge($feedid, $time, $value, $options)
+    {
+        $this->log->debug("daily_charge(feed=$feedid,time=$time,value=$value,options=".dumpopt($options).")");
+        if ($value===null || !array_key_exists('duration_sec',$options)) return null;
+        $day_fraction = $options['duration_sec'] / 86400;
+        $value = $value * $day_fraction;
+        $this->log->debug("daily_charge(feed=$feedid,day_fraction=$day_fraction)=$value");
+        return $value;
+    }
     public function add_source_feed($feedid, $time, $value, $options)
     {
         $last = $this->source_feed_data_time($feedid, $time, $value, $options);
