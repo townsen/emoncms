@@ -717,7 +717,8 @@ class Process_ProcessList
               "datafields"=>1,
               "unit"=>"",
               "group"=>_("Virtual"),
-              "description"=>_("<p><b>Source Cost Feed:</b><br>Virtual feeds can use this processor as the first one in the process list.<br>It sources data from the selected feed. However, if the feed does not contain a value at the start of the interval it will use the previous value. This is useful for feeds that contain cost data that changes at irregular intervals and takes effect for future dates.<br>The sourced value is passed back for further processing by the next processor in the processing list.<br>You can then add other processors to apply logic on the passed value for post-processing calculations in realtime.</p><p>Note: This virtual feed process list is executed on visualizations requests that use this virtual feed.</p>")
+              "description"=>_("<p><b>Source Cost Feed:</b><br>Virtual feeds can use this processor as the first one in the process list.<br>It sources data from the selected feed. It is identical to <i>Source Data Feed</i> except that if the feed does not contain a value for a given time it will use the immediately prior value (if one exists). This is useful for feeds that contain cost data that changes at
+irregular intervals and takes effect for future dates.<br>The value is passed on for further processing by the next processor in the processing list.</p><p>Note: This virtual feed process list is executed on visualizations requests that use this virtual feed.</p>")
            ),
            array(
               "id_num"=>61,
@@ -728,7 +729,18 @@ class Process_ProcessList
               "datafields"=>1,
               "unit"=>"",
               "group"=>_("Virtual"),
-              "description"=>_("<p><b>Source Feed Delta:</b><br>Virtual feeds can use this processor as the first one in the process list.<br>It sources data from the selected feed, transforming the values at each point to a delta relative to the previous point. This is useful for calculating costs per time interval from a cumulative total.<br>The sourced value is passed back for further processing by the next processor in the processing list.<br>You can then add other processors to apply logic on the passed value for post-processing calculations in realtime.</p><p>Note: This virtual feed process list is executed on visualizations requests that use this virtual feed.</p>")
+              "description"=>_("<p><b>Source Feed Delta:</b><br>Virtual feeds can use this processor as the first one in the process list.<br>It sources data from the selected feed, transforming the values at each point to a delta relative to the previous point. This is useful for calculating costs per time interval from a cumulative total. <br>The sourced value is passed on for further processing by the next processor in the processing list. </p><p>Note: This virtual feed process list is executed on visualizations requests that use this virtual feed.</p>")
+           ),
+           array(
+              "id_num"=>62,
+              "name"=>_("Cost Multiplier"),
+              "short"=>"cost",
+              "argtype"=>ProcessArg::FEEDID,
+              "function"=>"cost_multiplier",
+              "datafields"=>1,
+              "unit"=>"",
+              "group"=>_("Virtual"),
+              "description"=>_("<p><b>Cost Multiplier:</b><br>This takes the values from the previous process in the list and multiplies them by the values in the selected feed. It treats the selected feeds as a cost feed that contains a datapoint whenever the cost changes and the value of which at any given point in time is the most recent value prior to the time.<br>The computed value is passed on for further processing by the next processor in the processing list.<p>Note: This virtual feed process list is executed on visualizations requests that use this virtual feed.</p>")
            ),
            array(
               "name"=>_("EXIT"),
@@ -1566,13 +1578,26 @@ class Process_ProcessList
                 return $ret;
             }
         } else {
-            // @TODO This is a request for the last value only (shouldn't happen!)
+            // @TODO This is a request for the last value only, need implementation (why does it happen?)
             $timevalue = $this->feed->get_timevalue($feedid);
             $this->log->error("source_feed_delta(): lastvalue=[".implode(",",$timevalue)."]");
             if (is_null($timevalue)) return null;
             return $timevalue["value"];
         }
         return null;
+    }
+
+    // Multiplies the incoming feed by cost data taken from the given feed
+    // Loads full feed to data cache if it's the first time to load
+    public function cost_multiplier($feedid, $time, $value, $options)
+    {
+        $this->log->debug("cost_multiplier(feed=$feedid,time=$time,value=$value,options=".dumpopt($options));
+        $last = $this->source_cost_feed($feedid, $time, $value, $options);
+
+        if ($value===null || $last===null) return null;
+        $value = $last * $value;
+        $this->log->debug("cost_multiplier(feed=$feedid)=$value");
+        return $value;
     }
 
     public function add_source_feed($feedid, $time, $value, $options)
