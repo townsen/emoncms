@@ -23,7 +23,6 @@ class PHPFina implements engine_methods
     {
         if (isset($settings['datadir'])) $this->dir = $settings['datadir'];
         $this->log = new EmonLogger(__FILE__);
-        $this->log->setDebug(false);
     }
     
 // #### \/ Below are required methods

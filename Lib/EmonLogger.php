@@ -18,11 +18,11 @@ class EmonLogger
     private $caller = "";
     private $logenabled = false;
     private $log_level = 2;
-    private $saved_log_level = null;
+    private $debug = false;
+    private $debug_maxlen = 10;
     public $stout = false;
 
     private $log_levels = array(
-            0 =>'DEBUG',
             1 =>'INFO',
             2 =>'WARN', // default
             3 =>'ERROR'
@@ -39,7 +39,8 @@ class EmonLogger
             if ($settings['log']['level']) {
                 $this->log_level = $settings['log']['level'];
             }
-            $this->caller = basename($clientFileName);
+            $path = pathinfo($clientFileName);
+            $this->caller = $path['basename'];
             if (!file_exists($this->logfile)) {
                 $fh = @fopen($this->logfile, "a");
                 if (!$fh) {
@@ -49,17 +50,13 @@ class EmonLogger
                 }
             }
             $this->logenabled = is_writable($this->logfile);
-        }
-    }
-    
-    public function setDebug($on = true)
-    {
-        if ($on) {
-            $this->saved_log_level = $this->log_level;
-            $this->log_level = 0;
-        }
-        else {
-            if (!is_null($this->saved_log_level)) $this->log_level = $this->saved_log_level;
+
+            if (array_key_exists('debug', $settings['log'])) {
+                $debuglist = preg_split("/[\s,]+/", $settings['log']['debug']);
+                $this->debug = in_array($path['filename'], $debuglist);
+            }
+            if (array_key_exists('debug_maxlen', $settings['log']))
+                $this->debug_maxlen = $settings['log']['debug_maxlen'];
         }
     }
 
@@ -70,11 +67,58 @@ class EmonLogger
         $this->log_level = $log_level;
     }
 
-    public function debug($message)
+    private function dump($param)
     {
-        if ($this->log_level <= 0) {
-            $this->write("DEBUG", $message);
+        $msg = "";
+        $type = gettype($param);
+        switch ($type) {
+            case "NULL":
+                $msg .= "null";
+                break;
+            case "string":
+                $msg .= $param;
+                break;
+            case "boolean":
+                $msg .= $param ? "true":"false";
+                break;
+            case "integer":
+                $msg .= strval($param);
+                break;
+            case "double":
+                $msg .= round($param,4);
+                break;
+            case "array":
+                $msg .= $this->dumparray($param);
+                break;
+            default:
+                $msg .= strval($param); // just shows type of object
+                break;
         }
+        return $msg;
+    }
+
+    private function dumparray($array) {
+        $len = sizeof($array);
+        $res = [];
+        $n = 0;
+        foreach ($array as $key => $entry) {
+            ++$n;
+            if ($n == $this->debug_maxlen && $n < $len) {
+                $res[] = "...";
+                continue;
+            }
+            if ($n > $this->debug_maxlen && $n < $len) continue;
+            $res[] = is_integer($key) ? $this->dump($entry) : "[$key=".$this->dump($entry)."]";
+        }
+        return "[".implode(",",$res)."]";
+    }
+
+    public function debug(...$params)
+    {
+        if (!$this->debug) return;
+        $msg = "";
+        foreach ($params as $param) $msg .= $this->dump($param);
+        $this->write("DEBUG", $msg);
     }
 
     public function info($message)

@@ -18,7 +18,6 @@ class PHPTimeSeries implements engine_methods
     {
         if (isset($settings['datadir'])) $this->dir = $settings['datadir'];
         $this->log = new EmonLogger(__FILE__);
-        $this->log->setDebug(false);
     }
 
     /**
@@ -246,7 +245,7 @@ class PHPTimeSeries implements engine_methods
     public function lastvalue($id)
     {
         $id = (int) $id;
-        $this->log->debug("lastvalue(id=$id)");
+        $this->log->debug("lastvalue(id=",$id,")");
 
         if (!$npoints = $this->get_npoints($id)) return false;
         if (!$fh = $this->open($id,'rb')) return false;
@@ -255,7 +254,7 @@ class PHPTimeSeries implements engine_methods
         $dp = unpack("x/Itime/fvalue",fread($fh,9));
         fclose($fh);
         $ret =  array('time'=>$dp['time'], 'value'=>$dp['value']);
-        $this->log->debug("lastvalue(id=$id)=[".implode(",",$ret)."]");
+        $this->log->debug("lastvalue(id=",$id,")=",$ret);
         return $ret;
     }
 
@@ -303,7 +302,8 @@ class PHPTimeSeries implements engine_methods
         $skipmissing = (int) $skipmissing;
         $limitinterval = (int) $limitinterval;
 
-        $this->log->debug("get_data_combined(feed=$id,start=$start,end=$end,interval=$interval,average=$average,retro=$retro)");
+        $this->log->debug("get_data_combined(feed=",$id,",start=",$start,",end=",$end,
+                          ",interval=",$interval,",average=",$average,",retro=",$retro,")");
 
         global $settings;
         if ($timezone===0) $timezone = "UTC";
@@ -480,7 +480,7 @@ class PHPTimeSeries implements engine_methods
             $helperclass->csv_close();
             exit;
         } else {
-            $this->log->debug("get_data_combined(feed=$id)=".dumpdata($data));
+            $this->log->debug("get_data_combined(feed=",$id,")=",$data);
             return $data;
         }
     }
@@ -547,7 +547,7 @@ class PHPTimeSeries implements engine_methods
         // Compare this to the brute force method which may need to
         // go through millions of lines in the whole file to find a datapoint.
 
-        $this->log->debug("binarysearch(time=$time,npoints=$npoints,exact=$exact,retro=$retro)");
+        $this->log->debug("binarysearch(time=",$time,",npoints=",$npoints,",exact=",$exact,",retro=",$retro,")");
 
         if ($npoints==0) return -1;
         $start = 0; $end = $npoints-1; $mid = -2; $last_mid = -2; $ret = -1; $dp = null;
@@ -593,7 +593,7 @@ class PHPTimeSeries implements engine_methods
             }
         }
         $ret = array($mid,$dp['time'],$dp['value']);
-        $this->log->debug("binarysearch()=".dumpopt($ret));
+        $this->log->debug("binarysearch()=",$ret);
         return $ret;
     }
 

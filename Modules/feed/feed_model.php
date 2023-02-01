@@ -24,7 +24,6 @@ class Feed
     public function __construct($mysqli,$redis,$settings)
     {
         $this->log = new EmonLogger(__FILE__);
-        $this->log->setDebug(false);
         $this->mysqli = $mysqli;
         $this->redis = $redis;
         $this->settings = $settings;
@@ -443,7 +442,7 @@ class Feed
                 $row['start_time'] = $meta->start_time;
                 $row['interval'] = $meta->interval;
             }
-            $this->log->debug("Getting feeds: ".dumpdata($row));
+            $this->log->debug("Getting feeds: ",$row);
             $feeds[] = $row;
         }
         return $feeds;
@@ -532,7 +531,7 @@ class Feed
     {
         $id = (int) $id;
         $lastvalue = null;
-        $this->log->debug("get_timevalue(id=$id)");
+        $this->log->debug("get_timevalue(id=",$id,")");
         if (!$this->exist($id)) {
             $this->log->error("get_timevalue() Feed '".$id."' does not exist.");
             return null;
@@ -541,7 +540,7 @@ class Feed
 
         if ($engine == Engine::VIRTUALFEED) { //if virtual get it now
             $lastvirtual = $this->EngineClass(Engine::VIRTUALFEED)->lastvalue($id);
-            $this->log->debug("get_timevalue(id=$id) lastVirtual=[".implode(",",$lastvirtual)."]");
+            $this->log->debug("get_timevalue(id=",$id,") lastVirtual=",$lastvirtual);
             return array('time'=>$lastvirtual['time'], 'value'=>$lastvirtual['value']);
         }
 
@@ -549,12 +548,12 @@ class Feed
         {
             if ($this->redis->hExists("feed:$id",'time')) {
                 $lastvalue = $this->redis->hmget("feed:$id",array('time','value'));
-                $this->log->debug("get_timevalue(id=$id) Exists in Redis=[".implode(",",$lastvalue)."]");
+                $this->log->debug("get_timevalue(id=",$id,") Exists in Redis=",$lastvalue);
                 $lastvalue = $this->validate_timevalue($lastvalue);
             } else {
                 // if it does not, load it in to redis from the actual feed data because we have no updated data from sql feeds table with redis enabled.
                 if ($lastvalue = $this->EngineClass($engine)->lastvalue($id)) {
-                    $this->log->debug("get_timevalue(id=$id) from $engine, load into Redis");
+                    $this->log->debug("get_timevalue(id=",$id,") from ",$engine," load into Redis");
                     $this->redis->hMset("feed:$id", array('time' => $lastvalue['time'],'value' => $lastvalue['value']));
                 } else {
                     $lastvalue = array('time'=>null,'value'=>null);
@@ -570,7 +569,7 @@ class Feed
                 $lastvalue = array('time'=>(int)$row['time'], 'value'=>(float)$row['value']);
             }
         }
-        $this->log->debug("get_timevalue(id=$id)=[".implode(",",$lastvalue)."]");
+        $this->log->debug("get_timevalue(id=",$id,")=",$lastvalue);
         return $lastvalue;
     }
 
@@ -593,7 +592,8 @@ class Feed
 
     public function get_data($feedid,$start,$end,$interval,$average=0,$timezone="UTC",$timeformat="unixms",$csv=false,$skipmissing=0,$limitinterval=0,$delta=false,$dp=-1,$retro=false)
     {
-        $this->log->debug("get_data(feed=$feedid,start=$start,end=$end,interval=$interval,average=$average,delta=$delta,dp=$dp)");
+        $this->log->debug("get_data(feed=",$feedid,",start=",$start,",end=",$end,",interval=",$interval,
+                          ",average=",$average,",delta=",$delta,",dp=",$dp,")");
         $feedid = (int) $feedid;
         if (!$this->exist($feedid)) {
             return array('success'=>false, 'message'=>'Feed does not exist');
@@ -688,7 +688,7 @@ class Feed
         // Apply different timeformats if applicable
         if ($timeformat!="unix") $data = $this->format_output_time($data,$timeformat,$timezone);
         
-        $this->log->debug("get_data(feed=$feedid)=".dumpdata($data));
+        $this->log->debug("get_data(feed=",$feedid,")=",$data);
         return $data;
     }
     
@@ -721,18 +721,16 @@ class Feed
     
     private function delta_mode_convert($feedid,$data) {
         // Get last value
-        $this->log->debug("delta_mode_convert: feed=$feedid");
+        $this->log->debug("delta_mode_convert: feed=",$feedid);
         $dp = $this->get_timevalue($feedid);
         $time = $dp['time'];
         $value = $dp['value'];
-        $this->log->debug("delta_mode_convert: latest time=$time,value=$value");
+        $this->log->debug("delta_mode_convert: latest time=",$time,",value=",$value);
         
         // Calculate delta mode
         $last_val = null;
         for($i=0; $i<count($data)-1; $i++) {
-            $t = $data[$i][0];
-            $v = $data[$i][1];
-            $this->log->debug("delta_mode_convert:($i) before t=$t,v=$v");
+            $this->log->debug("delta_mode_convert:(",$i,") before=", $data[$i]);
             // Apply current value to end of day, week, month, year, interval
             if ($data[$i+1][1]===null && $time>$data[$i][0] && $time<=$data[$i+1][0]) {
                 $data[$i+1][1] = $dp['value'];
@@ -744,9 +742,7 @@ class Feed
                 $data[$i][1] = $data[$i+1][1] - $data[$i][1];
                 $last_val = $data[$i+1][1];
             }
-            $t = $data[$i][0];
-            $v = $data[$i][1];
-            $this->log->debug("delta_mode_convert:($i) after t=$t,v=$v");
+            $this->log->debug("delta_mode_convert:($i) after=",$data[$i]);
         }
         array_pop($data);
         

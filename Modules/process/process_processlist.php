@@ -39,7 +39,6 @@ class Process_ProcessList
         $this->proc_goto = &$parent->proc_goto;
 
         $this->log = new EmonLogger(__FILE__);
-        $this->log->setDebug();
 
         // Load MQTT if enabled
         // Publish value to MQTT topic, see: http://openenergymonitor.org/emon/node/5943
@@ -1517,7 +1516,7 @@ input from a Source Cost Feed representing daily standing charges it can be used
     // Loads full feed to data cache if it's the first time to load
     public function source_feed_data_time($feedid, $time, $value, $options)
     {
-        $this->log->debug("source_feed_data_TIME(feed=$feedid,time=$time,value=$value,options=".dumpopt($options));
+        $this->log->debug("source_feed_data_time(feed=",$feedid,",time=",$time,",value=",$value,",options=",$options);
         // If start and end are set this is a request over muultiple data points
         if (isset($options['start']) && isset($options['end'])) {
             // Load feed to data cache if it has not yet been loaded
@@ -1543,7 +1542,7 @@ input from a Source Cost Feed representing daily standing charges it can be used
     // data at the request time then return the prior value
     public function source_cost_feed($feedid, $time, $value, $options)
     {
-        $this->log->debug("source_cost_feed(feed=$feedid,time=$time,value=$value,options=".dumpopt($options));
+        $this->log->debug("source_cost_feed(feed=",$feedid,",time=",$time,",value=",$value,",options=",$options);
         // If start and end are set this is a request over multiple data points
         if (isset($options['start']) && isset($options['end'])) {
             // Load feed to data cache if it has not yet been loaded
@@ -1555,13 +1554,13 @@ input from a Source Cost Feed representing daily standing charges it can be used
             // Return value
             if (isset($this->data_cache[$feedid][$options['index']])) {
                 $ret = $this->data_cache[$feedid][$options['index']][1];
-                $this->log->debug("source_cost_feed()cached[${options['index']}]=$ret");
+                $this->log->debug("source_cost_feed()cached[",$options['index'],"]=",$ret);
                 return $ret;
             }
         } else {
             // This is a request for the last value only
             $timevalue = $this->feed->get_timevalue($feedid);
-            $this->log->debug("source_cost_feed(): lastvalue=".dumpdata($timevalue));
+            $this->log->debug("source_cost_feed(): lastvalue=",$timevalue);
             if (is_null($timevalue)) return null;
             return $timevalue["value"];
         }
@@ -1574,7 +1573,7 @@ input from a Source Cost Feed representing daily standing charges it can be used
     // data at the request time then return the prior value
     public function source_feed_delta($feedid, $time, $value, $options)
     {
-        $this->log->debug("source_feed_delta(feed=$feedid,time=$time,value=$value,options=".dumpopt($options));
+        $this->log->debug("source_feed_delta(feed=",$feedid,",time=",$time,",value=",$value,",options=",$options,")");
         // If start and end are set this is a request over multiple data points
         if (isset($options['start']) && isset($options['end'])) {
             // Load feed to data cache if it has not yet been loaded
@@ -1586,13 +1585,13 @@ input from a Source Cost Feed representing daily standing charges it can be used
             // Return value
             if (isset($this->data_cache[$feedid][$options['index']])) {
                 $ret = $this->data_cache[$feedid][$options['index']][1];
-                $this->log->debug("source_feed_delta()cached[${options['index']}]=$ret");
+                $this->log->debug("source_feed_delta()cached[",$options['index'],"]=",$ret);
                 return $ret;
             }
         } else {
-            // @TODO This is a request for the last value only, need implementation (why does it happen?)
+            // @TODO This is a request for the last value only, check it plays nice with delta...
             $timevalue = $this->feed->get_timevalue($feedid);
-            $this->log->error("source_feed_delta(): lastvalue=[".implode(",",$timevalue)."]");
+            $this->log->debug("source_feed_delta(): lastvalue=",$timevalue);
             if (is_null($timevalue)) return null;
             return $timevalue["value"];
         }
@@ -1603,22 +1602,23 @@ input from a Source Cost Feed representing daily standing charges it can be used
     // Loads full feed to data cache if it's the first time to load
     public function cost_multiplier($feedid, $time, $value, $options)
     {
-        $this->log->debug("cost_multiplier(feed=$feedid,time=$time,value=$value,options=".dumpopt($options));
+        $this->log->debug("cost_multiplier(feed=",$feedid,",time=",$time,",value=",$value,",options=",$options,")");
         $last = $this->source_cost_feed($feedid, $time, $value, $options);
 
         if ($value===null || $last===null) return null;
         $value = $last * $value;
-        $this->log->debug("cost_multiplier(feed=$feedid)=$value");
+        $this->log->debug("cost_multiplier(feed=",$feedid,")=",$value);
         return $value;
     }
 
     public function daily_charge($feedid, $time, $value, $options)
     {
-        $this->log->debug("daily_charge(feed=$feedid,time=$time,value=$value,options=".dumpopt($options).")");
+        $this->log->debug("daily_charge(feed=",$feedid,",time=",$time,",value=",$value,",options=",$options,")");
         if ($value===null || !array_key_exists('duration_sec',$options)) return null;
+        // @TODO calculate days according to calendar (take summertime, leap seconds etc. into account)
         $day_fraction = $options['duration_sec'] / 86400;
         $value = $value * $day_fraction;
-        $this->log->debug("daily_charge(feed=$feedid,day_fraction=$day_fraction)=$value");
+        $this->log->debug("daily_charge(feed=",$feedid,",day_fraction=",$day_fraction,")=",$value);
         return $value;
     }
     public function add_source_feed($feedid, $time, $value, $options)

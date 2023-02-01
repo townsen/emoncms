@@ -16,7 +16,6 @@ class VirtualFeed implements engine_methods
         $this->mysqli = $mysqli;
         $this->feed = $feed;
         $this->log = new EmonLogger(__FILE__);
-        $this->log->setDebug();
 
         require_once "Modules/input/input_model.php";
         $this->input = new Input($mysqli,$redis, $feed);
@@ -60,7 +59,7 @@ class VirtualFeed implements engine_methods
      */
     public function lastvalue($feedid)
     {
-        $this->log->debug("lastvalue(feed=$feedid)");
+        $this->log->debug("lastvalue(feed=",$feedid,")");
         $now = time();
         $feedid = intval($feedid);
         $processList = $this->feed->get_processlist($feedid);
@@ -81,14 +80,14 @@ class VirtualFeed implements engine_methods
         $dataValue = $process->input($now, null, $processList, $opt_timearray); // execute processlist 
         
         if ($dataValue !== null) $dataValue = (float) $dataValue ;
-        $this->log->debug("lastvalue(feed=$feedid)=$dataValue");
+        $this->log->debug("lastvalue(feed=",$feedid,")=",$dataValue);
         return array('time'=>(int)$now, 'value'=>$dataValue);  // datavalue can be float or null, dont cast!
     }
     
     // Executes virtual feed processlist for each timestamp in range
     public function get_data_combined($feedid,$start,$end,$interval,$average=0,$timezone="UTC",$timeformat="unix",$csv=false,$skipmissing=0,$limitinterval=1,$retro=false)
     {   
-        $this->log->debug("get_data_combined(feed=$feedid,start=$start,end=$end,interval=$interval)");
+        $this->log->debug("get_data_combined(feed=",$feedid,",start=",$start,",end=",$end,",interval=",$interval,")");
         $feedid = (int) $feedid;
         $skipmissing = (int) $skipmissing;
         $limitinterval = (int) $limitinterval;
@@ -165,7 +164,7 @@ class VirtualFeed implements engine_methods
                 $opt_timearray['duration_sec'] = $duration;
             }
             $dataValue = $process->input($time, $dataValue, $processList, $opt_timearray); // execute processlist 
-            $this->log->debug("process->input(time=$time)=$dataValue");
+            $this->log->debug("process->input(time=",$time,")=",$dataValue);
                 
             if ($dataValue!==null || $skipmissing===0) { // Remove this to show white space gaps in graph
                 if ($dataValue !== null) $dataValue = (float) $dataValue;
@@ -185,7 +184,7 @@ class VirtualFeed implements engine_methods
             $helperclass->csv_close();
             exit;
         } else {
-            $this->log->debug("get_data_combined()=".dumpdata($data));
+            $this->log->debug("get_data_combined()=",$data);
             return $data;
         }
     }
