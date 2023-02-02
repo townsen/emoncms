@@ -285,7 +285,7 @@ class PHPTimeSeries implements engine_methods
      * @param integer $start The unix timestamp in ms of the start of the data range
      * @param integer $end The unix timestamp in ms of the end of the data range
      * @param integer $interval output data point interval
-     * @param integer $average 1: enabled 0: disable averaging 2: use last value if no datapoint
+     * @param integer $average enabled/disable averaging
      * @param string $timezone a name for a php timezone eg. "Europe/London"
      * @param string $timeformat csv datetime format e.g: unix timestamp, excel, iso8601
      * @param integer $csv pipe output as csv

@@ -530,7 +530,6 @@ class Feed
     public function get_timevalue($id)
     {
         $id = (int) $id;
-        $lastvalue = null;
         $this->log->debug("get_timevalue(id=",$id,")");
         if (!$this->exist($id)) {
             $this->log->error("get_timevalue() Feed '".$id."' does not exist.");
@@ -723,9 +722,8 @@ class Feed
         // Get last value
         $this->log->debug("delta_mode_convert: feed=",$feedid);
         $dp = $this->get_timevalue($feedid);
-        $time = $dp['time'];
-        $value = $dp['value'];
-        $this->log->debug("delta_mode_convert: latest time=",$time,",value=",$value);
+        $time = $dp["time"];
+        $this->log->debug("delta_mode_convert: latest=",$dp);
         
         // Calculate delta mode
         $last_val = null;

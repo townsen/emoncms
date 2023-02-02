@@ -151,7 +151,7 @@ class VirtualFeed implements engine_methods
 
         $data = array();
         $dataValue = null;
-        $duration = 10000000;
+        $duration = null;
         
         while($time<=$end)
         {
