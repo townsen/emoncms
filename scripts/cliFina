@@ -1,0 +1,211 @@
+#!/usr/bin/env ruby
+#
+# A helpful utility for EmonCMS users
+# Nick Townsend, January 2023
+#
+require 'fileutils'
+require 'optparse'
+require 'ostruct'
+require 'pathname'
+
+opts = OpenStruct.new( :data_dir => '/var/opt/emoncms/phpfina',
+                      :dry_run => true,
+                      :print => false,
+                      :limit => nil )
+
+OptionParser.new do |o|
+  o.banner = "A utility for EmonCMS PHPFina timeseries\nUsage: #{o.program_name} [options] update..."
+  o.on('-d', '--data_dir data directory', "The directory containing PHPFina file (#{opts.data_dir})" ) do |dir|
+    raise "Directory doesn't exist!" unless Dir.exist? dir
+    opts.data_dir = dir
+  end
+  o.on( '--[no-]dry-run', "Dry run (#{opts.dry_run})" ) do |n|
+    opts.dry_run = n
+  end
+  o.on( '-p', '--print [limit]', "Print the interval data (with optional limit)" ) do |p|
+    opts.print = true
+    opts.limit = p.to_i if p
+  end
+  o.on( '-?', '--help', 'Display this screen' ) do
+    puts o
+    exit
+  end
+    
+  o.separator <<~USAGE
+
+    Updates are specified in the form <file>:<range><op><value> where:
+    
+     file   is the base name of the PHPFina files
+     range  is <bracket>start,end<bracket>
+     op     is one of =, +=, -=, *=, /=
+     amount is either a valid number or NaN (for setting values to null)
+    
+     Start and end may be specified as UNIX timestamps or as 'start' and 'end'
+     The end position may be specified relative to the start using the syntax:
+         +N or -N where N is the number of intervals
+         If the end position is then less than the start, the two are swapped
+     Brackets using parentheses () exclude, and braces [] include the timestamps
+    
+     Examples:
+     [end,-12]       Displays the last 13 intervals
+     (end,-12]       Displays the 12 intervals before the end, not the end
+     [33,66)=Nan     Sets the entries 33 to the entry before 66 to null
+     (start,+2)+=5.7 Adds 5.7 to the second and third entries
+     [55,end]*=0.9   Multiplies all the entries from timestamp 55 to the end by 0.9
+
+USAGE
+  begin
+    o.parse!
+    raise "No arguments!" if ARGV.empty? 
+  rescue
+    STDERR.puts $!
+    STDERR.puts o
+    exit 1
+  end
+end
+
+begin
+
+  ARGV.each do |cmdline|
+    cmd = OpenStruct.new
+    raise "Invalid update '#{cmdline}'" unless cmdline =~ %r{
+
+            \A
+            (\w+) # the filename
+            \s*:\s*
+              (([\[\(])\s*(\d+|start|end)\s*,\s*([+-]\d+|\d+|start|end)\s*([\]\)])) # the range
+            \s*
+            (([-+*/]?\s*=)\s*([.0-9]+|nan))? # the optional expression
+            \Z
+            }ix
+            
+    cmd.file = $1
+    cmd.range = $2
+    cmd.start_open = ($3 == '(')
+    cmd.start = $4
+    cmd.end = $5
+    cmd.end_open = ($6 == ')')
+    cmd.expr = $7
+    cmd.op = $8
+    cmd.amount = $9
+
+    if cmd.expr
+      raise "Operator requires an amount!" if cmd.op and cmd.amount.nil?
+      cmd.amount = (cmd.amount =~ /nan/i) ? Float::NAN : Float(cmd.amount)
+      raise "Pointless using an operator when the amount is NaN" if cmd.op != '=' and cmd.amount.nan?
+      raise "Can't divide by zero!" if cmd.op == '/=' and cmd.amount == 0.0
+      raise "Pointless multiplying by one!" if cmd.op == '*=' and cmd.amount == 1.0
+      raise "Pointless adding zero!" if cmd.op == '+=' and cmd.amount == 0.0
+      raise "Pointless subtracting zero!" if cmd.op == '-=' and cmd.amount == 0.0
+    end
+
+    base = Pathname.new(opts.data_dir) + cmd.file
+
+    %w{dat meta}.each do |ext|
+      raise "File #{base}.#{ext} doesn't exist!" unless File.readable? "#{base}.#{ext}"
+    end
+    puts "Processing file #{base}..."
+
+    interval = start_time = 0
+    File.open("#{base}.meta",'rb') do |f|
+      f.seek(8, :CUR)
+      (interval, start_time) = f.read(8).unpack("VV")
+    end
+
+    filesize = File.size("#{base}.dat")
+    raise "File size should  be a multiple of 4!" unless filesize % 4 == 0
+    nEntries = filesize / 4
+    end_time = start_time + ((nEntries-1) * interval)
+
+    puts "metafile: start_time=#{start_time}, interval=#{interval}, end_time=#{end_time}, #{nEntries} entries"
+    cmd.start = case cmd.start
+      when /start/i then start_time 
+      when /end/i then end_time 
+      else cmd.start.to_i
+    end
+
+    cmd.end = case cmd.end
+      when /start/i then start_time 
+      when /end/i then end_time 
+      when /[+-]\d+/ then cmd.start + (cmd.end.to_i * interval)
+      else cmd.end.to_i
+    end
+
+    if cmd.end < cmd.start
+      cmd.end, cmd.start = cmd.start, cmd.end 
+      cmd.start_open, cmd.end_open = cmd.end_open, cmd.start_open
+    end
+
+    srem = cmd.start % interval
+    erem = cmd.end % interval
+
+    # Adjust open ranges to the next or previous interval,
+    # if they're closed and not at an interval boundary it's an error.
+
+    if cmd.start_open # take it to the next interval start
+      cmd.start += (srem == 0)? interval : (interval - srem)
+    else
+      raise "Range start #{cmd.start} (closed) not on interval boundary!" if srem != 0
+    end
+    if cmd.end_open # take it back to the previous interval
+      cmd.end -= (erem != 0) ? erem : interval
+    else
+      raise "Range end #{cmd.end} (closed) not on interval boundary!" if erem != 0
+    end
+    normalized_range = "[#{cmd.start},#{cmd.end}]"
+    print "requested range: #{cmd.range}"
+    puts (cmd.range == normalized_range) ? "" : " normalized to #{normalized_range}" 
+
+    raise "Range start (#{cmd.start}) is before file start #{start_time}" if cmd.start < start_time
+    raise "Range end (#{cmd.end}) is after file end #{end_time}" if cmd.end > end_time
+
+    if cmd.expr && !opts.dry_run
+      print "Backing up file..."
+      FileUtils.cp("#{base}.dat","#{base}.dat.#{Time.now.strftime('%Y-%m-%dT%H:%M:%S')}") 
+      puts "done"
+    end
+
+    count = 0
+    now = Time.now
+    File.open("#{base}.dat",opts.dry_run ? 'rb': 'r+b') do |f|
+      time = cmd.start
+      while time <= cmd.end do
+        count += 1
+        pos = ((time-start_time) / interval)
+        f.seek(pos*4, :SET)
+        (datum,) = f.read(4).unpack("e")
+        newdatum = case cmd.op
+                   when '='  then cmd.amount
+                   when '+=' then datum + cmd.amount
+                   when '-=' then datum - cmd.amount
+                   when '*=' then datum * cmd.amount
+                   when '/=' then datum / cmd.amount
+                   else nil
+                   end
+        if newdatum
+          unless opts.dry_run
+            f.seek(pos*4, :SET)
+            f.write([newdatum].pack("e"))
+            msg = ", new=#{newdatum}"
+          else
+            msg = ", new=#{newdatum} skipped (dry run)"
+          end
+        else
+          msg = ""
+        end
+        if opts.print
+          if !opts.limit or (opts.limit && count < opts.limit-1) or (time == cmd.end)
+            puts "time=#{time}, data=#{datum}#{msg}"
+          end
+        end
+        puts "..." if opts.print && opts.limit && count == opts.limit && time != cmd.end
+        time += interval
+      end
+    end
+    msg = opts.dry_run ? "would be made" : "were made in #{(Time.now - now).round(3)} seconds"
+    puts "File #{base} (#{count} changes #{msg})"
+  end
+rescue
+  STDERR.puts "#{$!} at #{$!.backtrace[0]}"
+  exit 2
+end
