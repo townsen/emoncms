@@ -926,7 +926,7 @@ class Process_ProcessList
               "group"=>tr("Virtual"),
               "input_context" => false,
               "virtual_feed_context" => true,
-              "description"=>_("<p>sources data from the selected feed, transforming the values at each point to a delta relative to the previous point. This is useful for calculating costs per time interval from a cumulative total.</p>")
+              "description"=>tr("<p>sources data from the selected feed, transforming the values at each point to a delta relative to the previous point. This is useful for calculating costs per time interval from a cumulative total.</p>")
            ),
            array(
               "id_num"=>74,
@@ -939,20 +939,23 @@ class Process_ProcessList
               "group"=>tr("Virtual"),
               "input_context" => false,
             "virtual_feed_context" => true,
-            "description"=>_("<p>takes the values from the previous process in the list and multiplies them by the values in the selected feed. It treats the selected feeds as a cost feed that contains a datapoint whenever the cost changes and the value of which at any given point in time is the most recent value prior to the time.</p>")
+            "description"=>tr("<p>takes the values from the previous process in the list and multiplies them by the values in the selected feed. It treats the selected feed as a stateful feed that contains a datapoint whenever the tariff changes and the value of which at any given point in time is the most recent value prior to the time.</p>")
            ),
            array(
               "id_num"=>75,
-              "name"=>tr("Daily Charges"),
-              "short"=>"daily_charge",
-              "argtype"=>ProcessArg::NONE,
-              "function"=>"daily_charge",
-              "datafields"=>0,
-              "unit"=>"",
+              "name"=>tr("Standing Charges"),
+              "short"=>"standing",
+              "args" => array(
+                  array(
+                      "type"=>ProcessArg::TEXT,
+                      "default" => "P1D"
+                  ),
+              ),
+              "function"=>"standing_charge",
               "group"=>tr("Virtual"),
               "input_context" => false,
               "virtual_feed_context" => true,
-              "description"=>_("<p>takes the values from the previous process in the list and multiplies them by the fraction of a day represented by the current interval. With input from a Source Cost Feed representing daily standing charges it can be used to calculate the cost over any time period.</p>")
+              "description"=>tr("<p>Takes an optional <a href=https://www.php.net/manual/en/dateinterval.construct.php> period parameter</a> (eg. PT8H for 8 hours). The default value is 'P1D' for a day. It then multiplies the values from the previous process in the feed by the current interval divided by the period. With input from a Stateful Source Cost Feed representing periodic standing charges it can be used to calculate the cost over any time period. Typically these charges are in a TimeSeries feed that has been made stateful using the <b>state</b> process</p>")
            )
         );
     }
@@ -2075,34 +2078,53 @@ class Process_ProcessList
         return $value;
     }
 
-    public function daily_charge($feedid, $time, $value, $options)
+    public function standing_charge($period, $time, $value, $options)
     {
-        $this->log->debug("daily_charge(feed=",$feedid,",time=",$time,",value=",$value,",options=",$options,")");
+        $this->log->debug("standing_charge(period=",var_export($period,true),",time=",$time,",value=",$value,",options=",$options,")");
         if ($value===null || !array_key_exists('interval',$options)) return null;
-
+        if(empty($period)) {
+          $period_sec = 86400; // One day is the default
+          $this->log->debug("standing_charge(default period=",$period_sec, ")");
+        } elseif (is_numeric($period)) {
+          $period_sec = $period; // A number of seconds
+          $this->log->debug("standing_charge(numeric period=",$period_sec, ")");
+        } elseif (str_starts_with($period, 'P')) {
+          try {
+            $i = new DateInterval($period);
+            $period_sec = date_create('@0')->add($i)->getTimestamp();
+            $this->log->debug("standing_charge(dateinterval period=",$period_sec, ")");
+          }
+          catch (Exception $e) {
+	    $msg = $e->getMessage();
+            $this->log->error("Invalid period parameter: $msg");
+            return 0;
+          }
+        } else {
+            $this->log->error("Period parameter must begin with 'P': $period");
+            return 0;
+        }
         switch ($options['interval']) {
         case 'daily':
-          $day_fraction = 1.0;
+          $fraction = 86400.0 / $period_sec;
           break;
         case 'weekly':
-          $day_fraction = 7.0;
+          $fraction = (7.0 * 86400.0) / $period_sec;
           break;
         case 'monthly':
           $month = date('n', $time);
           $year = date('Y', $time);
-          $day_fraction =  date('t', mktime(0, 0, 0, $month, 1, $year));
+          $fraction =  date('t', mktime(0, 0, 0, $month, 1, $year)) * 86400.0 / $period_sec;
           break;
         case 'annual':
-          $month = 2;
           $year = date('Y', $time);
-          $day_fraction = 365 + date('L', mktime(0, 0, 0, 1, 1, $year));
+          $fraction =  (365 + date('L', mktime(0, 0, 0, 1, 1, $year))) * 86400.0 / $period_sec;
           break;
         default:
-          $day_fraction = $options['interval'] / 86400;
+          $fraction = $options['interval'] / $period_sec;
           break;
         }
-        $value = $value * $day_fraction;
-        $this->log->debug("daily_charge(feed=",$feedid,",day_fraction=",$day_fraction,")=",$value);
+        $value = $value * $fraction;
+        $this->log->debug("standing_charge(period=",var_export($period,true),",fraction=",$fraction,")=",$value);
         return $value;
     }
 
