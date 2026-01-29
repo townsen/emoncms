@@ -948,6 +948,8 @@ class Process_ProcessList
               "args" => array(
                   array(
                       "type"=>ProcessArg::TEXT,
+                      "name" => "Period",
+                      "desc" => tr("Either seconds or PHP DateInterval format"),
                       "default" => "P1D"
                   ),
               ),
