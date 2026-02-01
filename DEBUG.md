@@ -32,6 +32,6 @@ debug log in an abbreviated form. This is often good enough.
 There are two configurable parameters in `settings.ini`:
 
     ; List the files (without extension) in which you want debugging to be activated
-    debug = ; PHPFina PHPTimeSeries VirtualFeed feed_model process_model process_processlist
+    debug = PHPFina PHPTimeSeries VirtualFeed feed_model process_model process_processlist
     ; Maximum number of array elements to dump
     debug_maxlen = 10

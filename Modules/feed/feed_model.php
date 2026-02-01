@@ -13,6 +13,51 @@
 // no direct access
 defined('EMONCMS_EXEC') or die('Restricted access');
 
+/**
+ * Retrieve from options hash with defaults if not present
+ *
+ * Although we have multiple engines, they don't all support the 
+ * same data retrieval options, so rather than having to explicitly code them on each call we
+ * make the functions take an array of options.
+ * This function extracts values from the given array with defaults for those not explicitly set.
+ *
+ * Here is a list of the ones currently used:
+ * bool $average   enabled/disable averaging
+ * string  $timezone  a name for a php timezone eg. "Europe/London"
+ * string  $timeformat csv datetime format e.g: unix timestamp, excel, iso8601
+ * bool $csv pipe output as csv
+ * bool $skipmissing skip null datapoints
+ * bool $limitinterval limit interval to feed interval
+ * int  $dp number of decimal places
+ * bool $retro Normally false(0). When true(1) propagates the last value 
+ * bool $duty_cycle Normally false(0). When true(1) propagates the last value 
+ */
+function get_data_options($options, $name) {
+  switch ($name) {
+  case 'average':
+    return isset($options['average']) ? $options['average'] : false;
+  case'timezone':
+    return isset($options['timezone']) ? $options['timezone'] : "UTC";
+  case 'timeformat':
+    return isset($options['timeformat']) ? $options['timeformat'] : "unix";
+  case 'csv':
+    return isset($options['csv']) ? $options['csv'] : false;
+  case 'skipmissing':
+    return isset($options['skipmissing']) ? $options['skipmissing'] : false;
+  case 'limitinterval':
+    return isset($options['limitinterval']) ? $options['limitinterval'] : true;
+  case 'delta':
+    return isset($options['delta']) ? $options['delta'] : false;
+  case 'dp':
+    return isset($options['dp']) ? $options['dp'] : -1;
+  case 'retro':
+    return isset($options['retro']) ? $options['retro'] : false;
+  case 'dutycycle':
+    return isset($options['dutycycle']) ? $options['dutycycle'] : false;
+  }
+  return null;
+}
+
 class Feed
 {
     private $log;

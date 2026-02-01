@@ -958,6 +958,22 @@ class Process_ProcessList
               "input_context" => false,
               "virtual_feed_context" => true,
               "description"=>tr("<p>Takes an optional <a href=https://www.php.net/manual/en/dateinterval.construct.php> period parameter</a> (eg. PT8H for 8 hours). The default value is 'P1D' for a day. It then multiplies the values from the previous process in the feed by the current interval divided by the period. With input from a Stateful Source Cost Feed representing periodic standing charges it can be used to calculate the cost over any time period. Typically these charges are in a TimeSeries feed that has been made stateful using the <b>state</b> process</p>")
+           ),
+           array(
+              "id_num"=>76,
+              "name"=>tr("Duty Cycle"),
+              "short"=>"duty",
+              "args" => array(
+                  array(
+                      "type" => ProcessArg::FEEDID,
+                      "engines" => array(Engine::PHPTIMESERIES)
+                  ),
+              ),
+              "function"=>"duty_cycle",
+              "group"=>tr("Virtual"),
+              "input_context" => false,
+              "virtual_feed_context" => true,
+              "description"=>tr("<p>This takes a TimeSeries feed that represents the state of a device (on = 1, off = 0) and calculates the duty cycle for the interval requested. The result is a percentage representing the fraction of time the device is on during the interval.</p>")
            )
         );
     }
@@ -2128,6 +2144,13 @@ class Process_ProcessList
         $value = $value * $fraction;
         $this->log->debug("standing_charge(period=",var_export($period,true),",fraction=",$fraction,")=",$value);
         return $value;
+    }
+    // Calculate the duty cycle
+    public function duty_cycle($feedid, $time, $value, $options)
+    {
+        $this->log->debug("duty_cycle(feed=",$feedid,",time=",$time,",value=",$value,",options=",$options);
+        $timezone = get_data_options($options, 'timezone');
+        return 0;
     }
 
     // No longer used
