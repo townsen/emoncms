@@ -1915,7 +1915,10 @@ class Process_ProcessList
         if (isset($options['start']) && isset($options['end'])) {
             // Load feed to data cache if it has not yet been loaded
             if (!isset($this->data_cache[$feedid])) {
-                $this->data_cache[$feedid] = $this->feed->get_data($feedid, $options['start'] * 1000, $options['end'] * 1000, $options['interval'], $options['average'], $options['timezone'], 'unix', false, 0, 0);
+                $dopt = new FeedDataOptions();
+                $dopt->average = $options['average'];
+                $dopt->timezone = $options['timezone'];
+                $this->data_cache[$feedid] = $this->feed->get_data($feedid, $options['start'] * 1000, $options['end'] * 1000, $options['interval'], $dopt);
             }
             // Return value
             if (isset($this->data_cache[$feedid][$options['index']])) {
@@ -2032,8 +2035,11 @@ class Process_ProcessList
         if (isset($options['start']) && isset($options['end'])) {
             // Load feed to data cache if it has not yet been loaded
             if (!isset($this->data_cache[$feedid])) {
-                // Use named parameter retro to indicate inexact lookup type for costs (see feed/engine/PHPTimeSeries.php)
-                $this->data_cache[$feedid] = $this->feed->get_data($feedid,$options['start']*1000,$options['end']*1000,$options['interval'],0,$options['timezone'],'unix',false,0,0,false,-1,true);
+                $dopt = new FeedDataOptions();
+                $dopt->timezone = $options['timezone'];
+                $dopt->retro = true; // indicate inexact lookup type for costs (see feed/engine/PHPTimeSeries.php)
+              
+                $this->data_cache[$feedid] = $this->feed->get_data($feedid,$options['start']*1000,$options['end']*1000,$options['interval'],$dopt);
                 $this->log->debug("make_stateful() loaded to cache");
             }
             // Return value
@@ -2063,8 +2069,10 @@ class Process_ProcessList
         if (isset($options['start']) && isset($options['end'])) {
             // Load feed to data cache if it has not yet been loaded
             if (!isset($this->data_cache[$feedid])) {
-                // Use named parameter retro to indicate inexact lookup type for costs (see feed/engine/PHPTimeSeries.php)
-                $this->data_cache[$feedid] = $this->feed->get_data($feedid,$options['start']*1000,$options['end']*1000,$options['interval'],0,$options['timezone'],'unix',false,0,0,true,-1,true);
+                $dopt = new FeedDataOptions();
+                $dopt->delta = true; // delta the returned values
+                $dopt->retro = true; // indicates inexact lookup type for costs (see feed/engine/PHPTimeSeries.php)
+                $this->data_cache[$feedid] = $this->feed->get_data($feedid,$options['start']*1000,$options['end']*1000,$options['interval'],$dopt);
                 $this->log->debug("source_feed_delta() loaded to cache");
             }
             // Return value

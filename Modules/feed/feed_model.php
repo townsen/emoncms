@@ -34,16 +34,36 @@ defined('EMONCMS_EXEC') or die('Restricted access');
  */
 class FeedDataOptions 
 {
-  public bool $average = false;
-  public string $timezone = "UTC";
-  public string $timeformat = "unix";
-  public bool $csv = false;
-  public bool $skipmissing = false;
-  public int $limitinterval = 0;
-  public bool $delta = false;
-  public int $dp = -1;
-  public bool $retro = false;
-  public bool $dutycycle = false;
+  public bool $average;
+  public string $timezone;
+  public string $timeformat;
+  public bool $csv;
+  public bool $skipmissing;
+  public int $limitinterval;
+  public bool $delta;
+  public int $dp;
+  public bool $retro;
+  public bool $dutycycle;
+
+  public function __construct( 
+            bool $average = false, string $timezone = "UTC", string $timeformat = "unix",
+            bool $csv = false, bool $skipmissing = false, int $limitinterval = 0,
+            bool $delta = false, int $dp = -1, bool $retro = false, bool $dutycycle = false)
+  {
+      $this->average = $average;
+      $this->timezone = $timezone;
+      $this->timeformat = $timeformat;
+      $this->csv = $csv;
+      $this->skipmissing = $skipmissing;
+      $this->limitinterval = $limitinterval;
+      $this->delta = $delta;
+      $this->dp = $dp;
+      $this->retro = $retro;
+      $this->dutycycle = $dutycycle;
+  }
+  public function __toString() {
+    return "av: $average, tz: $timezone, tf: $timeformat, csv: $csv, skp: $skipmissing, limi: $limitinterval, del: $delta, dp: $dp, retro: $retro, duty: $dutycycle";
+  }
 }
 
 class Feed
@@ -674,15 +694,15 @@ class Feed
         }
     }
 
-    public function get_data($feedid,$start,$end,$interval,$average=0,$timezone="UTC",$timeformat="unixms",$csv=false,$skipmissing=false,$limitinterval=0,$delta=false,$dp=-1,$retro=false)
+    public function get_data($feedid,$start,$end,$interval,$dopt)
     {
         $feedid = (int) $feedid;
         if (!$this->exist($feedid)) {
             return array('success'=>false, 'message'=>'Feed does not exist');
         }
 
-        $start = $this->convert_time($start,$timezone);
-        $end = $this->convert_time($end,$timezone);
+        $start = $this->convert_time($start,$dopt->timezone);
+        $end = $this->convert_time($end,$dopt->timezone);
 
         if ($end<=$start) return array('success'=>false, 'message'=>"Request end time before start time");
 
@@ -692,12 +712,12 @@ class Feed
         }
 
         // Delta mode prepare
-        if ($delta && !$csv) {
-            $end = $this->delta_mode_next_interval($end,$interval,$timezone);
+        if ($dopt->delta && !$dopt->csv) {
+            $end = $this->delta_mode_next_interval($end,$interval,$dopt->timezone);
         }
 
         // Maximum request size
-        if (!$csv && is_numeric($interval)) {
+        if (!$dopt->csv && is_numeric($interval)) {
 
             if ($interval<1) return array('success'=>false, 'message'=>"Invalid interval");
 
@@ -711,20 +731,11 @@ class Feed
             }
         }
 
-        if (!in_array($timeformat,array("unix","unixms","excel","iso8601","notime"))) {
+        if (!in_array($dopt->timeformat,array("unix","unixms","excel","iso8601","notime"))) {
             return array('success'=>false, 'message'=>'Invalid time format');
         }
 
         $engine = $this->get_engine($feedid);
-
-        $dopt = new FeedDataOptions();
-        $dopt->average = $average;
-        $dopt->timezone = $timezone;
-        $dopt->timeformat = $timeformat;
-        $dopt->csv = $csv;
-        $dopt->skipmissing = $skipmissing;
-        $dopt->limitinterval = $limitinterval;
-        $dopt->retro = $retro;
 
         // Call to engine get_data_combined
         $data = $this->EngineClass($engine)->get_data_combined($feedid,$start,$end,$interval,$dopt);
@@ -781,26 +792,25 @@ class Feed
         if ($delta) $data = $this->delta_mode_convert($feedid,$data,$timeformat, $start,$interval);
 
         // Apply dp setting
-        if ($dp!=-1) {
-            $dp = (int) $dp;
+        if ($dopt->dp!=-1) {
 
-            if ($timeformat=="notime") {
+            if ($dopt->timeformat=="notime") {
                 for ($i=0; $i<count($data); $i++) {
                     if ($data[$i] !== null) {
-                        $data[$i] = round($data[$i],$dp);
+                        $data[$i] = round($data[$i],$dopt->dp);
                     }
                 }
             } else {
                 for ($i=0; $i<count($data); $i++) {
                     if ($data[$i][1] !== null) {
-                        $data[$i][1] = round($data[$i][1],$dp);
+                        $data[$i][1] = round($data[$i][1],$dopt->dp);
                     }
                 }
             }
         }
 
         // Apply different timeformats if applicable
-        if ($timeformat!="unix") $data = $this->format_output_time($data,$timeformat,$timezone);
+        if ($dopt->timeformat!="unix") $data = $this->format_output_time($data,$dopt->timeformat,$dopt->timezone);
 
         return $data;
     }

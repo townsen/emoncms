@@ -216,9 +216,8 @@ class MysqlTimeSeries implements engine_methods
           return $this->get_data_DMY( $feedid, $start, $end, $interval, $dopt->average, $dopt->timezone, $dopt->timeformat,
                                       $dopt->csv, $dopt->skipmissing);
         } else {
-            if (!$data_options->average) {
-              return $this->get_data( $feedid, $start, $end, $interval, $dopt->timezone,
-                                      $dopt->timeformat, $dopt->csv, $dopt->skipmissing, $dopt->limitinterval);
+            if (!$dopt->average) {
+              return $this->get_data( $feedid, $start, $end, $interval, $dopt);
             } else {
                 return $this->get_average($feedid, $start, $end, $interval, $dopt->timezone, $dopt->timeformat, $dopt->csv, $dopt->skipmissing);
             }
@@ -231,20 +230,20 @@ class MysqlTimeSeries implements engine_methods
      * @param integer $limitinterval not implemented
      *
     */
-    public function get_data($feedid, $start, $end, $interval, $timezone, $timeformat, $csv, $skipmissing, $limitinterval)
+    public function get_data($feedid, $start, $end, $interval, $dopt)
     {
         $feedid = (int) $feedid;
         $start = (int) $start;
         $end = (int) $end;
         $interval = (int) $interval;
-        $skipmissing = (int) $skipmissing;
+        $skipmissing = $dopt->skipmissing;
         // Interval should not be less than 1 second
         if ($interval < 1) $interval = 1;
         // Set time to start
         $time = $start;
 
         $notime = false;
-        if ($timeformat === "notime") {
+        if ($dopt->timeformat === "notime") {
             $notime = true;
         }
 
@@ -259,7 +258,7 @@ class MysqlTimeSeries implements engine_methods
             global $settings;
             require_once "Modules/feed/engine/shared_helper.php";
             $helperclass = new SharedHelper($settings['feed']);
-            $helperclass->set_time_format($timezone,$timeformat);
+            $helperclass->set_time_format($dopt->timezone,$dopt->timeformat);
             $helperclass->csv_header($feedid);
         } else {
             $data = array();
@@ -277,15 +276,15 @@ class MysqlTimeSeries implements engine_methods
             $value = null;
             $stmt->execute();
             if ($stmt->fetch() && $data_value !== null) {
-                if ($limitinterval==2) {
+                if ($dopt->limitinterval==2) {
                     $timestamp = $data_time;
                 }
                 $value = (float) $data_value;
             }
 
-            if ($value!==null || $skipmissing===0) {
+            if ($value!==null || !$dopt->skipmissing) {
                 // Write as csv or array
-                if ($csv) {
+                if ($dopt->csv) {
                     $helperclass->csv_write($timestamp,$value);
                 } else if ($notime) {
                     $data[] = $value;
@@ -297,7 +296,7 @@ class MysqlTimeSeries implements engine_methods
             // Advance position
             $time = $div_end;
         }
-        if ($csv) {
+        if ($dopt->csv) {
             $helperclass->csv_close();
             exit;
         } else {

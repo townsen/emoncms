@@ -173,8 +173,8 @@ function feed_controller()
 
                                 if (isset($averages[$index]) && $averages[$index]) $average = $averages[$index];
                                 if (isset($deltas[$index]) && $deltas[$index]) $delta = $deltas[$index]; else $delta = 0;
-
-                                $results[$index]['data'] = $feed->get_data($feedid,$start,$end,$interval,$average,$timezone,$timeformat,$csv,$skipmissing,$limitinterval,$delta,$dp);
+                                $dopt = new FeedDataOptions($average, $timezone,$timeformat,$csv,$skipmissing,$limitinterval,$delta,$dp);
+                                $results[$index]['data'] = $feed->get_data($feedid,$start,$end,$interval,$dopt);
                             } else {
                                 $results[$index]['data'] = $feed->get_data_DMY_time_of_day($feedid,$start,$end,$interval,$timezone,$timeformat,get('split'));
                             }
