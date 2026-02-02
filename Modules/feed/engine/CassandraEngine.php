@@ -162,12 +162,8 @@ class CassandraEngine implements engine_methods
 
     /**
      * Return the data for the given timerange - cf shared_helper.php
-     *
-     * @param integer $limitinterval not implemented
-     * @param integer $retro not implemented
-     *
      */
-    public function get_data_combined($feedid,$start,$end,$interval,$average=0,$timezone="UTC",$timeformat="unix",$csv=false,$skipmissing=0,$limitinterval=1,$retro=false)
+    public function get_data_combined($feedid,$start,$end,$interval,$dopt)
     {
         global $settings; // max_datapoints;
 
@@ -183,7 +179,7 @@ class CassandraEngine implements engine_methods
         if ($req_dp > $settings["feed"]["max_datapoints"]) return array('success'=>false, 'message'=>"Request datapoint limit reached (" . $settings["feed"]["max_datapoints"] . "), increase request interval or time range, requested datapoints = $req_dp");
 
         $notime = false;
-        if ($timeformat === "notime") {
+        if ($dopt->timeformat === "notime") {
             $notime = true;
         }
 
@@ -196,7 +192,7 @@ class CassandraEngine implements engine_methods
                 $time = $row['time'];
                 $dataValue = $row['data'];
                 if($time>=$dp_time){
-                    if ($dataValue!=NULL || $skipmissing===0) { // Remove this to show white space gaps in graph
+                    if ($dataValue!=NULL || !$dopt->skipmissing) { // Remove this to show white space gaps in graph
                         if ($dataValue !== null) $dataValue = (float) $dataValue;
                         
                         if ($notime) {

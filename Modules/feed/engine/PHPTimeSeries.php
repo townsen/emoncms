@@ -282,34 +282,25 @@ class PHPTimeSeries implements engine_methods
      * @param integer $start The unix timestamp in ms of the start of the data range
      * @param integer $end The unix timestamp in ms of the end of the data range
      * @param integer $interval output data point interval
-     * @param integer $average enabled/disable averaging
-     * @param string $timezone a name for a php timezone eg. "Europe/London"
-     * @param string $timeformat csv datetime format e.g: unix timestamp, excel, iso8601
-     * @param integer $csv pipe output as csv
-     * @param integer $skipmissing skip null datapoints
-     * @param integer $limitinterval limit interval to feed interval
-     * @param integer $retro Normally false(0). When true(1) propagates the last value
+     * @param object  $dopt  FeedDataOptions
      * @return void or array
      */
-    public function get_data_combined($id,$start,$end,$interval,$average=0,$timezone="UTC",$timeformat="unix",$csv=false,$skipmissing=0,$limitinterval=1,$retro=false)
+    public function get_data_combined($id,$start,$end,$interval,$dopt)
     {
         $id = (int) $id;
         $start = (int) $start;
         $end = (int) $end;
-        $skipmissing = (int) $skipmissing;
-        $limitinterval = (int) $limitinterval;
 
         global $settings;
-        if ($timezone===0) $timezone = "UTC";
 
-        if ($csv) {
+        if ($dopt->csv) {
             require_once "Modules/feed/engine/shared_helper.php";
             $helperclass = new SharedHelper($settings['feed']);
-            $helperclass->set_time_format($timezone,$timeformat);
+            $helperclass->set_time_format($dopt->timezone,$dopt->timeformat);
         }
 
         $notime = false;
-        if ($timeformat === "notime") {
+        if ($dopt->timeformat === "notime") {
             $notime = true;
         }
 
@@ -351,7 +342,7 @@ class PHPTimeSeries implements engine_methods
             $interval_check = $interval;
         }
 
-        if ($csv) {
+        if ($dopt->csv) {
             $helperclass->csv_header($id);
         } else {
             $data = array();
@@ -362,8 +353,8 @@ class PHPTimeSeries implements engine_methods
         if (!$fh = $this->open($id,'rb')) return false;
 
         // Get starting position
-        if ($average) {
-            $start_dp = $this->binarysearch($fh,$time,$npoints,false,$retro);
+        if ($dopt->average) {
+            $start_dp = $this->binarysearch($fh,$time,$npoints,false,$dopt->retro);
             if ($start_dp==-1) {
                 $start_dp = array($npoints);
             }
@@ -384,14 +375,14 @@ class PHPTimeSeries implements engine_methods
             $timestamp = $div_start;
             $value = null;
 
-            if (!$average) {
+            if (!$dopt->average) {
                 // returns nearest datapoint that is >= search time
                 // or <= search time depending on $retro
-                $result = $this->binarysearch($fh,$time,$npoints,false,$retro);
+                $result = $this->binarysearch($fh,$time,$npoints,false,$dopt->retro);
                 if ($result!=-1) {
                     // check that datapoint is within interval
                     if ($result[1]<$div_end) {
-                        if ($limitinterval==2) {
+                        if ($dopt->limitinterval==2) {
                             $timestamp = $result[1];
                         }
                         $value = $result[2];
@@ -446,7 +437,7 @@ class PHPTimeSeries implements engine_methods
 
             }
 
-            if ($value!==null || $skipmissing===0) {
+            if ($value!==null || !$dopt->skipmissing) {
                 if ($csv) {
                     $helperclass->csv_write($timestamp,$value);
                 } else if ($notime) {
@@ -461,7 +452,7 @@ class PHPTimeSeries implements engine_methods
 
         fclose($fh);
 
-        if ($csv) {
+        if ($dopt->csv) {
             $helperclass->csv_close();
             exit;
         } else {

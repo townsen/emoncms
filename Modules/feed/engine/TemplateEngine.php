@@ -129,28 +129,25 @@ class TemplateEngine implements engine_methods
      * heat pump COP from electric consumption and heat output data. CSV export in multiple columns and stacking of feeds in graphs are also made easier.
      *
      * While there are applications where returning the exact timestamp of the recorded data is important, this is currently outside of the design goals of the emoncms application.
+     * Note that different engines and usages require options to be set, these are documented in feed_model.php FeedDataOptions class
     */
-    public function get_data_combined($id,$start,$end,$interval,$average=0,$timezone="UTC",$timeformat="unix",$csv=false,$skipmissing=0,$limitinterval=1,$retro=false)
+    public function get_data_combined($id,$start,$end,$interval,$dopt)
     {
         $id = (int) $id;
-        $skipmissing = (int) $skipmissing;
-        $limitinterval = (int) $limitinterval;
 
         $start = (int) $start;
         $end = (int) $end;
 
         if ($end<=$start) return array('success'=>false, 'message'=>"request end time before start time");
 
-        if ($timezone===0) $timezone = "UTC";
-
-        if ($csv) {
+        if ($dopt->csv) {
             require_once "Modules/feed/engine/shared_helper.php";
             $helperclass = new SharedHelper($settings['feed']);
-            $helperclass->set_time_format($timezone,$timeformat);
+            $helperclass->set_time_format($dopt->timezone,$dopt->timeformat);
         }
 
         $notime = false;
-        if ($timeformat === "notime") {
+        if ($dopt->timeformat === "notime") {
             $notime = true;
         }
 
@@ -190,7 +187,7 @@ class TemplateEngine implements engine_methods
             $time = $start;
         }
 
-        if ($csv) {
+        if ($dopt->csv) {
             $helperclass->csv_header($id);
         } else {
             $data = array();
@@ -215,7 +212,7 @@ class TemplateEngine implements engine_methods
             $value = 100;
 
             // Write as csv or array
-            if ($csv) {
+            if ($dopt->csv) {
                 $helperclass->csv_write($div_start,$value);
             } else if ($notime) {
                 $data[] = $value;
@@ -227,7 +224,7 @@ class TemplateEngine implements engine_methods
             $time = $div_end;
         }
 
-        if ($csv) {
+        if ($dopt->csv) {
             $helperclass->csv_close();
             exit;
         } else {

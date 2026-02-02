@@ -167,16 +167,10 @@ interface engine_methods {
      * @param integer $start The unix timestamp in ms of the start of the data range
      * @param integer $end The unix timestamp in ms of the end of the data range
      * @param integer $interval output data point interval
-     * @param integer $average enabled/disable averaging
-     * @param string $timezone a name for a php timezone eg. "Europe/London"
-     * @param string $timeformat csv datetime format e.g: unix timestamp, excel, iso8601
-     * @param integer $csv pipe output as csv
-     * @param integer $skipmissing skip null datapoints
-     * @param integer $limitinterval limit interval to feed interval
-     * @param integer $retro Normally false(0). When true(1) propagates the last value 
+     * @param object  $data_options (see feed_model.php FeedDataOptions)
      * @return void or array
      */
-    public function get_data_combined($feedid,$start,$end,$interval,$average,$timezone,$timeformat,$csv,$skipmissing,$limitinterval,$retro);
+    public function get_data_combined($feedid,$start,$end,$interval,$data_options);
 
     /**
      * delete all past data for a feed. keeping all the feed settings the same

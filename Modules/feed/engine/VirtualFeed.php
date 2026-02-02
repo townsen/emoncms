@@ -103,11 +103,9 @@ class VirtualFeed implements engine_methods
     }
 
     // Executes virtual feed processlist for each timestamp in range
-    public function get_data_combined($feedid,$start,$end,$interval,$average=0,$timezone="UTC",$timeformat="unix",$csv=false,$skipmissing=0,$limitinterval=1,$retro=false)
+    public function get_data_combined($feedid,$start,$end,$interval,$dopt)
     {
         $feedid = (int) $feedid;
-        $skipmissing = (int) $skipmissing;
-        $limitinterval = (int) $limitinterval;
 
         $start = (int) $start;
         $end = (int) $end;
@@ -115,30 +113,30 @@ class VirtualFeed implements engine_methods
         $processList = $this->feed->get_processlist($feedid);
         if ($processList == '' || $processList == null) return false;
 
-        if ($csv) {
+        if ($dopt->csv) {
             global $settings;
             require_once "Modules/feed/engine/shared_helper.php";
             $helperclass = new SharedHelper($settings['feed']);
-            $helperclass->set_time_format($timezone,$timeformat);
+            $helperclass->set_time_format($dopt->timezone,$dopt->timeformat);
             $helperclass->csv_header($feedid);
         }
 
         $notime = false;
-        if ($timeformat === "notime") {
+        if ($dopt->timeformat === "notime") {
             $notime = true;
         }
 
         // Lets instantiate a new class of process so we can run many processes recursively without interference
         require_once "Modules/process/process_model.php";
-        $process = new Process($this->mysqli,$this->input,$this->feed,$timezone);
+        $process = new Process($this->mysqli,$this->input,$this->feed,$dopt->timezone);
 
         $opt_timearray = array(
             'sourceid'=>$feedid,
             'start' => $start,
             'end' => $end,
             'interval' => $interval,
-            'average' => $average,
-            'timezone' => $timezone,
+            'average' => $dopt->average,
+            'timezone' => $dopt->timezone,
             'sourcetype' => ProcessOriginType::VIRTUALFEED,
             'index' => 0
         );
@@ -147,7 +145,7 @@ class VirtualFeed implements engine_methods
             $fixed_interval = false;
             // align to day, month, year
             $date = new DateTime();
-            $date->setTimezone(new DateTimeZone($timezone));
+            $date->setTimezone(new DateTimeZone($dopt->timezone));
             $date->setTimestamp($start);
             $date->modify("midnight");
             $modify = "+1 day";
@@ -177,10 +175,10 @@ class VirtualFeed implements engine_methods
         {
             $dataValue = $process->input($time, $dataValue, $processList, $opt_timearray); // execute processlist
 
-            if ($dataValue!==null || $skipmissing===0) { // Remove this to show white space gaps in graph
+            if ($dataValue!==null || !$dopt->skipmissing) { // Remove this to show white space gaps in graph
                 if ($dataValue !== null) $dataValue = (float) $dataValue;
 
-                if ($csv) {
+                if ($dopt->csv) {
                     $helperclass->csv_write($time,$dataValue);
                 } else if ($notime) {
                     $data[] = $dataValue;
@@ -199,7 +197,7 @@ class VirtualFeed implements engine_methods
             $opt_timearray['index']++;
         }
 
-        if ($csv) {
+        if ($dopt->csv) {
             $helperclass->csv_close();
             exit;
         } else {

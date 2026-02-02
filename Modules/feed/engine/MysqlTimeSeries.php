@@ -206,24 +206,21 @@ class MysqlTimeSeries implements engine_methods
      * @param integer $start The unix timestamp in ms of the start of the data range
      * @param integer $end The unix timestamp in ms of the end of the data range
      * @param integer $interval output data point interval
-     * @param integer $average enabled/disable averaging
-     * @param string $timezone a name for a php timezone eg. "Europe/London"
-     * @param string $timeformat csv datetime format e.g: unix timestamp, excel, iso8601 (NOT CURRENTLY SUPPORTED IN MYSQL)
-     * @param integer $csv pipe output as csv                                            (NOT CURRENTLY SUPPORTED IN MYSQL)
-     * @param integer $skipmissing skip null datapoints
-     * @param integer $limitinterval limit interval to feed interval
+     * @param object  $dopt FeedDataOptions
      * @return void or array
      */
 
-    public function get_data_combined($feedid,$start,$end,$interval,$average=0,$timezone="UTC",$timeformat="unix",$csv=false,$skipmissing=0,$limitinterval=1)
+    public function get_data_combined($feedid,$start,$end,$interval,$dopt)
     {
         if (in_array($interval,array("daily","weekly","monthly","annual"))) {
-            return $this->get_data_DMY($feedid, $start, $end, $interval, $average, $timezone, $timeformat, $csv, $skipmissing);
+          return $this->get_data_DMY( $feedid, $start, $end, $interval, $dopt->average, $dopt->timezone, $dopt->timeformat,
+                                      $dopt->csv, $dopt->skipmissing);
         } else {
-            if (!$average) {
-                return $this->get_data($feedid, $start, $end, $interval, $timezone, $timeformat, $csv, $skipmissing, $limitinterval);
+            if (!$data_options->average) {
+              return $this->get_data( $feedid, $start, $end, $interval, $dopt->timezone,
+                                      $dopt->timeformat, $dopt->csv, $dopt->skipmissing, $dopt->limitinterval);
             } else {
-                return $this->get_average($feedid, $start, $end, $interval, $timezone, $timeformat, $csv, $skipmissing);
+                return $this->get_average($feedid, $start, $end, $interval, $dopt->timezone, $dopt->timeformat, $dopt->csv, $dopt->skipmissing);
             }
         }
     }

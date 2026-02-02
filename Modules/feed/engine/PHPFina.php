@@ -461,25 +461,24 @@ class PHPFina implements engine_methods
      * @param integer $start The unix timestamp in ms of the start of the data range
      * @param integer $end The unix timestamp in ms of the end of the data range
      * @param integer $interval output data point interval
-     * @param integer $average enabled/disable averaging
-     * @param string $timezone a name for a php timezone eg. "Europe/London"
-     * @param string $timeformat csv datetime format e.g: unix timestamp, excel, iso8601
-     * @param integer $csv pipe output as csv
-     * @param integer $skipmissing skip null datapoints
-     * @param integer $limitinterval limit interval to feed interval
-     * @param integer $retro Not used in this module. Required to preserve method signature
+     * @param object  $data_options (FeedDataOptions)
      * @return void or array
      */
-    public function get_data_combined($id,$start,$end,$interval,$average=0,$timezone="UTC",$timeformat="unix",$csv=false,$skipmissing=0,$limitinterval=1,$retro=false)
+    public function get_data_combined($id,$start,$end,$interval,$data_options)
+      
     {
         $id = (int) $id;
         $start = (int) $start;
         $end = (int) $end;
-        $skipmissing = (int) $skipmissing;
-        $limitinterval = (int) $limitinterval;
+
+        $average=$data_options->average;
+        $timezone=$data_options->timezone;
+        $timeformat=$data_options->timeformat;
+        $csv=$data_options->csv;
+        $skipmissing=$data_options->skipmissing;
+        $limitinterval=$data_options->limitinterval;
 
         global $settings;
-        if ($timezone===0) $timezone = "UTC";
 
         if ($csv) {
             require_once "Modules/feed/engine/shared_helper.php";

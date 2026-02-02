@@ -56,9 +56,10 @@ class PHPFinaTest extends \PHPUnit\Framework\TestCase {
     }
 
     public function testGet_data() {
-        $skipmissing = 0;
-        $limitinterval = 1;
-		    $data = $this->engine->get_data_combined($this->feedid,$this->start,$this->end,$this->interval,0,"UTC","unix",false,$skipmissing,$limitinterval);
+        $data_options = new FeedDataOptions();
+        $data_options->skipmissing = 0;
+        $data_options->limitinterval = 1;
+        $data = $this->engine->get_data_combined($this->feedid,$this->start,$this->end,$this->interval,$data_options);
 		
         $this->assertTrue(!empty($data) && empty($data['success']), 'no blank result or success == false');
     }

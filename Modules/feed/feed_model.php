@@ -32,30 +32,18 @@ defined('EMONCMS_EXEC') or die('Restricted access');
  * bool $retro Normally false(0). When true(1) propagates the last value 
  * bool $duty_cycle Normally false(0). When true(1) propagates the last value 
  */
-function get_data_options($options, $name) {
-  switch ($name) {
-  case 'average':
-    return isset($options['average']) ? $options['average'] : false;
-  case'timezone':
-    return isset($options['timezone']) ? $options['timezone'] : "UTC";
-  case 'timeformat':
-    return isset($options['timeformat']) ? $options['timeformat'] : "unix";
-  case 'csv':
-    return isset($options['csv']) ? $options['csv'] : false;
-  case 'skipmissing':
-    return isset($options['skipmissing']) ? $options['skipmissing'] : false;
-  case 'limitinterval':
-    return isset($options['limitinterval']) ? $options['limitinterval'] : true;
-  case 'delta':
-    return isset($options['delta']) ? $options['delta'] : false;
-  case 'dp':
-    return isset($options['dp']) ? $options['dp'] : -1;
-  case 'retro':
-    return isset($options['retro']) ? $options['retro'] : false;
-  case 'dutycycle':
-    return isset($options['dutycycle']) ? $options['dutycycle'] : false;
-  }
-  return null;
+class FeedDataOptions 
+{
+  public bool $average = false;
+  public string $timezone = "UTC";
+  public string $timeformat = "unix";
+  public bool $csv = false;
+  public bool $skipmissing = false;
+  public int $limitinterval = 0;
+  public bool $delta = false;
+  public int $dp = -1;
+  public bool $retro = false;
+  public bool $dutycycle = false;
 }
 
 class Feed
@@ -686,7 +674,7 @@ class Feed
         }
     }
 
-    public function get_data($feedid,$start,$end,$interval,$average=0,$timezone="UTC",$timeformat="unixms",$csv=false,$skipmissing=0,$limitinterval=0,$delta=false,$dp=-1,$retro=false)
+    public function get_data($feedid,$start,$end,$interval,$average=0,$timezone="UTC",$timeformat="unixms",$csv=false,$skipmissing=false,$limitinterval=0,$delta=false,$dp=-1,$retro=false)
     {
         $feedid = (int) $feedid;
         if (!$this->exist($feedid)) {
@@ -729,8 +717,17 @@ class Feed
 
         $engine = $this->get_engine($feedid);
 
+        $dopt = new FeedDataOptions();
+        $dopt->average = $average;
+        $dopt->timezone = $timezone;
+        $dopt->timeformat = $timeformat;
+        $dopt->csv = $csv;
+        $dopt->skipmissing = $skipmissing;
+        $dopt->limitinterval = $limitinterval;
+        $dopt->retro = $retro;
+
         // Call to engine get_data_combined
-        $data = $this->EngineClass($engine)->get_data_combined($feedid,$start,$end,$interval,$average,$timezone,$timeformat,$csv,$skipmissing,$limitinterval,$retro);
+        $data = $this->EngineClass($engine)->get_data_combined($feedid,$start,$end,$interval,$dopt);
 
         if ($this->settings['redisbuffer']['enabled'] && !isset($data["success"]) && !$average && is_numeric($interval) && $csv==false) {
             // Add redisbuffer cache if available
@@ -740,7 +737,7 @@ class Feed
                 $bufferstart = $start;
             }
 
-            $bufferdata = $this->EngineClass(Engine::REDISBUFFER)->get_data_combined($feedid,$start,$end,$interval,$average,$timezone,$timeformat,$csv,$skipmissing,$limitinterval);
+            $bufferdata = $this->EngineClass(Engine::REDISBUFFER)->get_data_combined($feedid,$start,$end,$interval,$dopt);
 
             if (!empty($bufferdata)) {
                 // $this->log->info("get_data_combined() Buffer cache merged feedid=$feedid start=". reset($data)[0] ." end=". end($data)[0] ." bufferstart=". reset($bufferdata)[0] ." bufferend=". end($bufferdata)[0]);
