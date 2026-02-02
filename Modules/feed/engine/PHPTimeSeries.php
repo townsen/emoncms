@@ -598,15 +598,15 @@ class PHPTimeSeries implements engine_methods
                 $this->log->debug("binarysearch(exact)=notfound");
                 return -1;
             }
-            if (!$retro && $dp['time'] > $time || $retro && $dp['time'] < $time)
+            if ((!$retro && ($dp['time'] > $time)) || ($retro && ($dp['time'] < $time)))
                 $this->log->debug("binarysearch()=inexact match");
-            elseif ($retro && $dp['time'] > $time && $mid > 0) {
+            elseif ($retro && ($dp['time'] > $time) && ($mid > 0)) {
                 $this->log->debug("binarysearch()=inexact match returning previous dp");
                 $mid -= 1;
                 fseek($fh, $mid*9);
                 $dp = @unpack("x/Itime/fvalue", fread($fh,9));
             }
-            elseif (!$retro && $dp['time'] < $time && $mid < $npoints-1) {
+            elseif (!$retro && ($dp['time'] < $time) && ($mid < $npoints-1)) {
                 $this->log->debug("binarysearch()=inexact match returning next dp");
                 $mid += 1;
                 fseek($fh,$mid*9);
