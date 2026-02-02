@@ -2017,7 +2017,7 @@ class Process_ProcessList
             // Load feed to data cache if it has not yet been loaded
             if (!isset($this->data_cache[$feedid])) {
                 // Use named parameter retro to indicate inexact lookup type for costs (see feed/engine/PHPTimeSeries.php)
-                $this->data_cache[$feedid] = $this->feed->get_data($feedid,$options['start']*1000,$options['end']*1000,$options['interval'],0,$options['timezone'],'unix',retro: true);
+                $this->data_cache[$feedid] = $this->feed->get_data($feedid,$options['start']*1000,$options['end']*1000,$options['interval'],0,$options['timezone'],'unix',false,0,0,false,-1,true);
                 $this->log->debug("make_stateful() loaded to cache");
             }
             // Return value
@@ -2048,7 +2048,7 @@ class Process_ProcessList
             // Load feed to data cache if it has not yet been loaded
             if (!isset($this->data_cache[$feedid])) {
                 // Use named parameter retro to indicate inexact lookup type for costs (see feed/engine/PHPTimeSeries.php)
-                $this->data_cache[$feedid] = $this->feed->get_data($feedid,$options['start']*1000,$options['end']*1000,$options['interval'],0,$options['timezone'],'unix',delta: 1, retro: true);
+                $this->data_cache[$feedid] = $this->feed->get_data($feedid,$options['start']*1000,$options['end']*1000,$options['interval'],0,$options['timezone'],'unix',false,0,0,true,-1,true);
                 $this->log->debug("source_feed_delta() loaded to cache");
             }
             // Return value
